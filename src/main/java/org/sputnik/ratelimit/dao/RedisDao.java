@@ -2,10 +2,6 @@ package org.sputnik.ratelimit.dao;
 
 import java.time.Duration;
 import java.time.Instant;
-import java.time.LocalDateTime;
-import java.time.ZoneId;
-import java.time.format.DateTimeFormatter;
-import java.time.format.DateTimeParseException;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.sputnik.ratelimit.util.Constants;
@@ -15,7 +11,6 @@ import redis.clients.jedis.JedisPool;
 public class RedisDao {
 
   private static final Logger logger = LoggerFactory.getLogger(RedisDao.class);
-  private final DateTimeFormatter dtf = DateTimeFormatter.ofPattern("yyyy-MM-dd HH:mm:ss");
   protected final JedisPool jedisPool;
 
   /**
@@ -36,7 +31,8 @@ public class RedisDao {
    */
   public void addEvent(String eventId, String key, Duration duration) {
     try (Jedis jedis = jedisPool.getResource()) {
-      jedis.rpush(eventId + Constants.KEY_SEPARATOR + key, dtf.format(LocalDateTime.now()));
+
+      jedis.rpush(eventId + Constants.KEY_SEPARATOR + key, Long.toString(System.currentTimeMillis()));
       if (duration != null) {
         jedis.expire(eventId + Constants.KEY_SEPARATOR + key, (int) duration.getSeconds());
       }
@@ -68,10 +64,9 @@ public class RedisDao {
    */
   public Instant getListFirstElement(String eventId, String key) {
     Instant result;
-    String aux;
     try (Jedis jedis = jedisPool.getResource()) {
-      aux = jedis.lindex(eventId + Constants.KEY_SEPARATOR + key, 0);
-      result = parseDateTime(aux);
+      String aux = jedis.lindex(eventId + Constants.KEY_SEPARATOR + key, 0);
+      result = parseTimeStamp(aux);
     }
 
     return result;
@@ -79,13 +74,12 @@ public class RedisDao {
 
   public Instant getListFirstEventElement(String eventId, String key, Long eventMaxIntents) {
     Instant result;
-    String aux;
     try (Jedis jedis = jedisPool.getResource()) {
       String redisKey = eventId + Constants.KEY_SEPARATOR + key;
       long length = jedis.llen(redisKey);
       long index = Math.max(0, length - eventMaxIntents);
-      aux = jedis.lindex(redisKey, index);
-      result = parseDateTime(aux);
+      String aux = jedis.lindex(redisKey, index);
+      result = parseTimeStamp(aux);
     }
 
     return result;
@@ -104,11 +98,23 @@ public class RedisDao {
     try (Jedis jedis = jedisPool.getResource()) {
       aux = jedis.lpop(eventId + Constants.KEY_SEPARATOR + key);
       if (aux != null) {
-        result = parseDateTime(aux);
+        result = parseTimeStamp(aux);
       }
     }
 
     return result;
+  }
+
+  private Instant parseTimeStamp(String textTimeInMillis) {
+    Instant instant = null;
+
+    try {
+      instant = Instant.ofEpochMilli(Long.parseLong(textTimeInMillis));
+    } catch (NumberFormatException e) {
+      logger.warn("Error parsing date: {}", textTimeInMillis);
+    }
+
+    return instant;
   }
 
   /**
@@ -134,18 +140,5 @@ public class RedisDao {
     try (Jedis jedis = jedisPool.getResource()) {
       jedis.del(eventId + Constants.KEY_SEPARATOR + key);
     }
-  }
-
-  private Instant parseDateTime(String dateTime) {
-    Instant result = null;
-    try {
-
-      LocalDateTime parse = LocalDateTime.parse(dateTime, dtf);
-      result = parse.atZone(ZoneId.systemDefault()).toInstant();
-    } catch (DateTimeParseException e) {
-      logger.warn("Error parsing date: {}", dateTime);
-    }
-
-    return result;
   }
 }

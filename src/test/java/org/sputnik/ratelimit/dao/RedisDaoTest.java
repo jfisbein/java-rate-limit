@@ -5,7 +5,6 @@ import static org.junit.jupiter.api.Assertions.assertNull;
 
 import java.text.SimpleDateFormat;
 import java.time.Duration;
-import java.util.Date;
 import java.util.concurrent.TimeUnit;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.junit.jupiter.api.BeforeAll;
@@ -86,8 +85,7 @@ public class RedisDaoTest {
     redisDao.addEvent(TEST_EVENT_ID, TEST_KEY, TEST_TIMEOUT);
     assertEquals(3, redisDao.getListLength(TEST_EVENT_ID, TEST_KEY).intValue());
     String firstElement = redisClient.lindex(TEST_EVENT_ID + Constants.KEY_SEPARATOR + TEST_KEY, 0);
-    assertEquals(firstElement,
-        sdf.format(new Date(redisDao.getListFirstElement(TEST_EVENT_ID, TEST_KEY).toEpochMilli())));
+    assertEquals(Long.parseLong(firstElement), redisDao.getListFirstElement(TEST_EVENT_ID, TEST_KEY).toEpochMilli());
   }
 
   @Test
@@ -106,8 +104,7 @@ public class RedisDaoTest {
     redisDao.addEvent(TEST_EVENT_ID, TEST_KEY, TEST_TIMEOUT);
     assertEquals(3, redisDao.getListLength(TEST_EVENT_ID, TEST_KEY).intValue());
     String firstElement = redisClient.lindex(TEST_EVENT_ID + Constants.KEY_SEPARATOR + TEST_KEY, 1);
-    assertEquals(firstElement,
-        sdf.format(new Date(redisDao.getListFirstEventElement(TEST_EVENT_ID, TEST_KEY, 2L).toEpochMilli())));
+    assertEquals(Long.parseLong(firstElement), redisDao.getListFirstEventElement(TEST_EVENT_ID, TEST_KEY, 2L).toEpochMilli());
   }
 
   @Test
@@ -126,8 +123,7 @@ public class RedisDaoTest {
     redisDao.addEvent(TEST_EVENT_ID, TEST_KEY, TEST_TIMEOUT);
     assertEquals(3, redisDao.getListLength(TEST_EVENT_ID, TEST_KEY).intValue());
     String firstElement = redisClient.lindex(TEST_EVENT_ID + Constants.KEY_SEPARATOR + TEST_KEY, 0);
-    assertEquals(firstElement,
-        sdf.format(new Date(redisDao.removeListFirstElement(TEST_EVENT_ID, TEST_KEY).toEpochMilli())));
+    assertEquals(Long.parseLong(firstElement), redisDao.removeListFirstElement(TEST_EVENT_ID, TEST_KEY).toEpochMilli());
     assertEquals(2, redisDao.getListLength(TEST_EVENT_ID, TEST_KEY).intValue());
   }
 
