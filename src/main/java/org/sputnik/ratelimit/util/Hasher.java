@@ -1,6 +1,5 @@
 package org.sputnik.ratelimit.util;
 
-import java.io.UnsupportedEncodingException;
 import java.nio.charset.StandardCharsets;
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
@@ -21,12 +20,11 @@ public class Hasher {
    * @return hashed string.
    * @throws NoSuchAlgorithmException if no Provider supports a MacSpi implementation for the specified algorithm.
    * @throws InvalidKeyException if the given key is inappropriate for initializing this MAC.
-   * @throws UnsupportedEncodingException In the very rare case that <code>UTF-8</code> is not supported.
    */
   public static String convertToHmacSHA256(String text, String secret)
-      throws NoSuchAlgorithmException, InvalidKeyException, UnsupportedEncodingException {
+      throws NoSuchAlgorithmException, InvalidKeyException {
 
-    SecretKey key = new SecretKeySpec(secret.getBytes("UTF-8"), "HmacSHA256");
+    SecretKey key = new SecretKeySpec(secret.getBytes(StandardCharsets.UTF_8), "HmacSHA256");
     Mac mac = Mac.getInstance(key.getAlgorithm());
     mac.init(key);
 
