@@ -14,17 +14,16 @@ public class PasswordHasher {
   }
 
   /**
-   * Hash text using HMAC SHA 256
+   * Hash text using HMAC SHA 256.
    *
-   * @param chain String to hash
-   * @param secret secret to use
-   * @return hashed string
+   * @param chain String to hash.
+   * @param secret secret to use.
+   * @return hashed string.
    * @throws NoSuchAlgorithmException if no Provider supports a MacSpi implementation for the specified algorithm.
    * @throws InvalidKeyException if the given key is inappropriate for initializing this MAC.
-   * @throws IllegalStateException if this MAC has not been initialized.
    */
   public static String convertToHmacSHA256(String chain, String secret)
-      throws NoSuchAlgorithmException, InvalidKeyException, IllegalStateException {
+      throws NoSuchAlgorithmException, InvalidKeyException {
 
     SecretKey key = new SecretKeySpec(secret.getBytes(), "HmacSHA256");
     Mac mac = Mac.getInstance(key.getAlgorithm());

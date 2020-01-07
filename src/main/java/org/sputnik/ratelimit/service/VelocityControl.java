@@ -4,13 +4,16 @@ import java.time.Duration;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.HashMap;
+import java.util.HashSet;
 import java.util.Map;
+import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.LoggerFactory;
 import org.sputnik.ratelimit.dao.RedisDao;
+import org.sputnik.ratelimit.exeception.DuplicatedEventKeyException;
 import org.sputnik.ratelimit.util.EventConfig;
 import org.sputnik.ratelimit.util.PasswordHasher;
 import redis.clients.jedis.JedisPool;
@@ -27,15 +30,15 @@ public class VelocityControl {
    *
    * @param jedisConf Jedis configuration.
    * @param hashingSecret secret for hashing values
-   * @param eventsConf Events configuration.
+   * @param eventConfigs Events configuration.
    */
-  public VelocityControl(JedisConfiguration jedisConf, String hashingSecret, EventConfig... eventsConf) {
+  public VelocityControl(JedisConfiguration jedisConf, String hashingSecret, EventConfig... eventConfigs) {
     this.hashingSecret = hashingSecret;
     JedisPool jedisPool = new JedisPool(jedisConf.getPoolConfig(), jedisConf.getHost(), jedisConf.getPort(),
         jedisConf.getTimeout(), jedisConf.getPassword(), jedisConf.getDatabase(), jedisConf.getClientName());
     redisDao = new RedisDao(jedisPool);
-
-    eventsConfig.putAll(Stream.of(eventsConf).collect(Collectors.toMap(EventConfig::getEventId, Function.identity())));
+    validateEventsConfig(eventConfigs);
+    eventsConfig.putAll(Stream.of(eventConfigs).collect(Collectors.toMap(EventConfig::getEventId, Function.identity())));
   }
 
   /**
@@ -159,5 +162,16 @@ public class VelocityControl {
     }
 
     return valid;
+  }
+
+  private void validateEventsConfig(EventConfig... eventConfigs) {
+    Set<String> keys = new HashSet<>();
+    for (EventConfig cfg : eventConfigs) {
+      String eventId = cfg.getEventId();
+      if (keys.contains(eventId)) {
+        throw new DuplicatedEventKeyException(eventId);
+      }
+      keys.add(eventId);
+    }
   }
 }

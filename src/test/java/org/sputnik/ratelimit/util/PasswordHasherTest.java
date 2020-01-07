@@ -10,7 +10,7 @@ public class PasswordHasherTest {
 
   @Test
   public void testPasswordHasher()
-      throws InvalidKeyException, NoSuchAlgorithmException, IllegalStateException {
+      throws InvalidKeyException, NoSuchAlgorithmException {
     String hashed = PasswordHasher.convertToHmacSHA256("mi barba tiene 3 pelos", "note lo digo");
     assertEquals("IpdSn+krpu8J9lx+6NG9MmCxEP6fjqBpPK25EYTNp+c=", hashed);
   }

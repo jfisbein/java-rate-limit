@@ -8,28 +8,28 @@ import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
 import java.util.concurrent.TimeUnit;
+import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.slf4j.LoggerFactory;
+import org.sputnik.ratelimit.exeception.DuplicatedEventKeyException;
 import org.sputnik.ratelimit.util.EventConfig;
 import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
-import redis.clients.jedis.Jedis;
-import redis.clients.jedis.JedisPool;
 
 @Testcontainers
 public class VelocityControlTest {
 
   private static final org.slf4j.Logger logger = LoggerFactory.getLogger(VelocityControlTest.class);
 
-  protected static VelocityControl vcs;
-  private static Jedis redisClient;
+  private static VelocityControl vcs;
+
   @Container
-  public static final GenericContainer redis = new GenericContainer("redis:3.0.6").withExposedPorts(6379);
+  private static final GenericContainer redis = new GenericContainer("redis:3.0.6").withExposedPorts(6379);
 
   @BeforeAll
-  public static void init() {
+  static void init() {
     List<EventConfig> eventsConfig = new ArrayList<>();
     eventsConfig.add(new EventConfig("testLogin", 3, Duration.ofSeconds(3600)));
     eventsConfig.add(new EventConfig("freeTrial", 1, Duration.ofSeconds(600)));
@@ -39,13 +39,10 @@ public class VelocityControlTest {
 
     vcs = new VelocityControl(new JedisConfiguration().setPort(redis.getMappedPort(6379)).setHost(redis.getContainerIpAddress()),
         "hashsecret", eventsConfig.toArray(new EventConfig[0]));
-
-    redisClient = new JedisPool(redis.getContainerIpAddress(), redis.getMappedPort(6379)).getResource();
   }
 
-
   @Test
-  public void testCanDoEventFullFlow() throws InterruptedException {
+  void testCanDoEventFullFlow() throws InterruptedException {
     String testEventId = "logMessageTest";
     String testKey = "my_test_key";
 
@@ -67,7 +64,7 @@ public class VelocityControlTest {
   }
 
   @Test
-  public void testCanDoEventFullFlowEdgeCase() throws InterruptedException {
+  void testCanDoEventFullFlowEdgeCase() throws InterruptedException {
     String testEventId = "logMessageTest";
     String testKey = "my_test_key_2";
 
@@ -91,110 +88,118 @@ public class VelocityControlTest {
   }
 
   @Test
-  public void testCanDoEventNoEventId() {
+  void testCanDoEventNoEventId() {
     logger.info("CanDoEventTest: no correct eventId and no empty or null key");
     assertFalse(vcs.canDoEvent("IncorrectLogin", "This is a test"));
   }
 
   @Test
-  public void testCanDoEventCorrectEventId() {
+  void testCanDoEventCorrectEventId() {
     logger.info("CanDoEventTest: correct eventId and no empty or null key");
     assertTrue(vcs.canDoEvent("testLogin", "This is a test"));
   }
 
   @Test
-  public void testCanDoEventNoCorrectEventIdEmptyKey() {
+  void testCanDoEventNoCorrectEventIdEmptyKey() {
     logger.info("CanDoEventTest: no correct eventId and empty key");
     assertFalse(vcs.canDoEvent("IncorrectLogin", ""));
   }
 
   @Test
-  public void testCanDoEventCorrectEventIdEmptyKey() {
+  void testCanDoEventCorrectEventIdEmptyKey() {
     logger.info("CanDoEventTest: correct eventId and empty key");
     assertFalse(vcs.canDoEvent("testLogin", ""));
   }
 
   @Test
-  public void testCanDoEventCorrectEventIdNullKey() {
+  void testCanDoEventCorrectEventIdNullKey() {
     logger.info("CanDoEventTest: correct eventId and empty key");
     assertFalse(vcs.canDoEvent("testLogin", null));
   }
 
   @Test
-  public void testCanDoEventNoCorrectEventIdNullKey() {
+  void testCanDoEventNoCorrectEventIdNullKey() {
     logger.info("CanDoEventTest: no correct eventId and empty key");
     assertFalse(vcs.canDoEvent("IncorrectLogin", null));
   }
 
   @Test
-  public void testDoEventNoEventId() {
+  void testDoEventNoEventId() {
     logger.info("DoEventTest: no correct eventId and no empty or null key");
     assertFalse(vcs.doEvent("IncorrectLogin", "This is a test"));
   }
 
   @Test
-  public void testDoEventCorrectEventId() {
+  void testDoEventCorrectEventId() {
     logger.info("DoEventTest: correct eventId and no empty or null key");
     assertTrue(vcs.doEvent("testLogin", "This is a test"));
   }
 
   @Test
-  public void testDoEventNoCorrectEventIdEmptyKey() {
+  void testDoEventNoCorrectEventIdEmptyKey() {
     logger.info("DoEventTest: no correct eventId and empty key");
     assertFalse(vcs.doEvent("IncorrectLogin", ""));
   }
 
   @Test
-  public void testDoEventCorrectEventIdEmptyKey() {
+  void testDoEventCorrectEventIdEmptyKey() {
     logger.info("DoEventTest: correct eventId and empty key");
     assertFalse(vcs.doEvent("testLogin", ""));
   }
 
   @Test
-  public void testDoEventCorrectEventIdNullKey() {
+  void testDoEventCorrectEventIdNullKey() {
     logger.info("DoEventTest: correct eventId and empty key");
     assertFalse(vcs.doEvent("testLogin", null));
   }
 
   @Test
-  public void testDoEventNoCorrectEventIdNullKey() {
+  void testDoEventNoCorrectEventIdNullKey() {
     logger.info("DoEventTest: no correct eventId and empty key");
     assertFalse(vcs.doEvent("IncorrectLogin", null));
   }
 
   @Test
-  public void testResetNoEventId() {
+  void testResetNoEventId() {
     logger.info("Reset: no correct eventId and no empty or null key");
     assertFalse(vcs.reset("IncorrectLogin", "This is a test"));
   }
 
   @Test
-  public void testResetCorrectEventId() {
+  void testResetCorrectEventId() {
     logger.info("Reset: correct eventId and no empty or null key");
     assertTrue(vcs.reset("testLogin", "This is a test"));
   }
 
   @Test
-  public void testResetNoCorrectEventIdEmptyKey() {
+  void testResetNoCorrectEventIdEmptyKey() {
     logger.info("Reset: no correct eventId and empty key");
     assertFalse(vcs.reset("IncorrectLogin", ""));
   }
 
   @Test
-  public void testResetCorrectEventIdEmptyKey() {
+  void testResetCorrectEventIdEmptyKey() {
     logger.info("Reset: correct eventId and empty key");
     assertFalse(vcs.reset("testLogin", ""));
   }
 
   @Test
-  public void testResetCorrectEventIdNullKey() {
+  void testResetCorrectEventIdNullKey() {
     logger.info("Reset: correct eventId and empty key");
     assertFalse(vcs.reset("testLogin", null));
   }
 
   @Test
-  public void testResetNoCorrectEventIdNullKey() {
+  void testResetNoCorrectEventIdNullKey() {
     logger.info("Reset: no correct eventId and empty key");
     assertFalse(vcs.reset("IncorrectLogin", null));
+  }
+
+  @Test
+  void testDuplicateEventKey() {
+    Assertions.assertThrows(DuplicatedEventKeyException.class, () ->
+        new VelocityControl(redis.getContainerIpAddress(), redis.getMappedPort(6379), "secret",
+            new EventConfig("aaa", 3, Duration.ZERO),
+            new EventConfig("aaa", 2, Duration.ofSeconds(5))));
   }
 }
