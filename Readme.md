@@ -7,7 +7,8 @@ Usage
 -----
 
 ```java
-import org.sputnik.ratelimit.service.JedisConfiguration;import org.sputnik.ratelimit.service.RateLimiter;
+import org.sputnik.ratelimit.service.JedisConfiguration;
+import org.sputnik.ratelimit.service.RateLimiter;
 
 class LoginManager {
     // Configure rate limiter to allow maximum 3 attempts every hour.
