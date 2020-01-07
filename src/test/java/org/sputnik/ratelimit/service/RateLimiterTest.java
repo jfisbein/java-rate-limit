@@ -19,11 +19,11 @@ import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
 @Testcontainers
-public class VelocityControlTest {
+public class RateLimiterTest {
 
-  private static final org.slf4j.Logger logger = LoggerFactory.getLogger(VelocityControlTest.class);
+  private static final org.slf4j.Logger logger = LoggerFactory.getLogger(RateLimiterTest.class);
 
-  private static VelocityControl vcs;
+  private static RateLimiter vcs;
 
   @Container
   private static final GenericContainer redis = new GenericContainer("redis:3.0.6").withExposedPorts(6379);
@@ -37,7 +37,7 @@ public class VelocityControlTest {
     eventsConfig.add(new EventConfig("recurrenceTest", 3, Duration.ofSeconds(10)));
     eventsConfig.add(new EventConfig("logMessageTest", 3, Duration.ofSeconds(2)));
 
-    vcs = new VelocityControl(new JedisConfiguration().setPort(redis.getMappedPort(6379)).setHost(redis.getContainerIpAddress()),
+    vcs = new RateLimiter(JedisConfiguration.builder().port(redis.getMappedPort(6379)).host(redis.getContainerIpAddress()).build(),
         "hashsecret", eventsConfig.toArray(new EventConfig[0]));
   }
 
@@ -198,7 +198,7 @@ public class VelocityControlTest {
   @Test
   void testDuplicateEventKey() {
     Assertions.assertThrows(DuplicatedEventKeyException.class, () ->
-        new VelocityControl(redis.getContainerIpAddress(), redis.getMappedPort(6379), "secret",
+        new RateLimiter(redis.getContainerIpAddress(), redis.getMappedPort(6379), "secret",
             new EventConfig("aaa", 3, Duration.ZERO),
             new EventConfig("aaa", 2, Duration.ofSeconds(5))));
   }

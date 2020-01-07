@@ -15,12 +15,12 @@ import org.slf4j.LoggerFactory;
 import org.sputnik.ratelimit.dao.RedisDao;
 import org.sputnik.ratelimit.exeception.DuplicatedEventKeyException;
 import org.sputnik.ratelimit.util.EventConfig;
-import org.sputnik.ratelimit.util.PasswordHasher;
+import org.sputnik.ratelimit.util.Hasher;
 import redis.clients.jedis.JedisPool;
 
-public class VelocityControl {
+public class RateLimiter {
 
-  private static final org.slf4j.Logger logger = LoggerFactory.getLogger(VelocityControl.class);
+  private static final org.slf4j.Logger logger = LoggerFactory.getLogger(RateLimiter.class);
   private final RedisDao redisDao;
   private final String hashingSecret;
   private final Map<String, EventConfig> eventsConfig = new HashMap<>();
@@ -32,7 +32,7 @@ public class VelocityControl {
    * @param hashingSecret secret for hashing values
    * @param eventConfigs Events configuration.
    */
-  public VelocityControl(JedisConfiguration jedisConf, String hashingSecret, EventConfig... eventConfigs) {
+  public RateLimiter(JedisConfiguration jedisConf, String hashingSecret, EventConfig... eventConfigs) {
     this.hashingSecret = hashingSecret;
     JedisPool jedisPool = new JedisPool(jedisConf.getPoolConfig(), jedisConf.getHost(), jedisConf.getPort(),
         jedisConf.getTimeout(), jedisConf.getPassword(), jedisConf.getDatabase(), jedisConf.getClientName());
@@ -49,8 +49,8 @@ public class VelocityControl {
    * @param hashingSecret secret for hashing values
    * @param eventsConf Events configuration.
    */
-  public VelocityControl(String host, int port, String hashingSecret, EventConfig... eventsConf) {
-    this(new JedisConfiguration().setHost(host).setPort(port), hashingSecret, eventsConf);
+  public RateLimiter(String host, int port, String hashingSecret, EventConfig... eventsConf) {
+    this(JedisConfiguration.builder().host(host).port(port).build(), hashingSecret, eventsConf);
   }
 
   /**
@@ -133,13 +133,20 @@ public class VelocityControl {
     return eventDeleted;
   }
 
+  /**
+   * Hash text using Hasher utility class.
+   *
+   * @param text Texto to be hashed
+   * @return Hased text
+   * @see Hasher
+   */
   private String hashText(String text) {
     String hash = text;
     try {
       logger.debug("Hashing key");
-      hash = PasswordHasher.convertToHmacSHA256(text, hashingSecret);
+      hash = Hasher.convertToHmacSHA256(text, hashingSecret);
     } catch (Exception e) {
-      logger.warn("Error hashing text, using clear text: {}", e.getMessage(), e);
+      logger.warn("Error hashing text, using clear text: {}", e.getMessage());
     }
 
     return hash;
@@ -164,6 +171,12 @@ public class VelocityControl {
     return valid;
   }
 
+  /**
+   * Validates no key are duplicated in the events config supplied.
+   *
+   * @param eventConfigs List of event configs to validate.
+   * @throws DuplicatedEventKeyException when a key is duplicated.
+   */
   private void validateEventsConfig(EventConfig... eventConfigs) {
     Set<String> keys = new HashSet<>();
     for (EventConfig cfg : eventConfigs) {

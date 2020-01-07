@@ -134,12 +134,4 @@ public class RedisDaoTest {
     assertNull(redisDao.removeListFirstElement(TEST_EVENT_ID, TEST_KEY));
     assertEquals(2, redisDao.getListLength(TEST_EVENT_ID, TEST_KEY).intValue());
   }
-
-  @Test
-  public void testListExpires() throws InterruptedException {
-    redisClient.rpush(TEST_EVENT_ID + Constants.KEY_SEPARATOR + TEST_KEY, "A", "B", "C");
-    redisDao.setListExpires(TEST_EVENT_ID, TEST_KEY, 1);
-    TimeUnit.MILLISECONDS.sleep(1200);
-    assertEquals(0, redisDao.getListLength(TEST_EVENT_ID, TEST_KEY).intValue());
-  }
 }

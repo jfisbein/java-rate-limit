@@ -118,19 +118,6 @@ public class RedisDao {
   }
 
   /**
-   * Add expiration to a list.
-   *
-   * @param eventId Event id.
-   * @param key Key.
-   * @param seconds seconds to expire.
-   */
-  public void setListExpires(String eventId, String key, Integer seconds) {
-    try (Jedis jedis = jedisPool.getResource()) {
-      jedis.expire(eventId + Constants.KEY_SEPARATOR + key, seconds);
-    }
-  }
-
-  /**
    * Remove list of events for an event id, and a key.
    *
    * @param eventId Event id.
