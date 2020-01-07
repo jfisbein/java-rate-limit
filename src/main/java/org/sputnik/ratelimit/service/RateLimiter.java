@@ -12,7 +12,7 @@ import java.util.stream.Collectors;
 import java.util.stream.Stream;
 import org.apache.commons.lang3.StringUtils;
 import org.slf4j.LoggerFactory;
-import org.sputnik.ratelimit.dao.RedisDao;
+import org.sputnik.ratelimit.dao.EventsRedisRepository;
 import org.sputnik.ratelimit.exeception.DuplicatedEventKeyException;
 import org.sputnik.ratelimit.util.EventConfig;
 import org.sputnik.ratelimit.util.Hasher;
@@ -21,7 +21,7 @@ import redis.clients.jedis.JedisPool;
 public class RateLimiter {
 
   private static final org.slf4j.Logger logger = LoggerFactory.getLogger(RateLimiter.class);
-  private final RedisDao redisDao;
+  private final EventsRedisRepository eventsRedisRepository;
   private final String hashingSecret;
   private final Map<String, EventConfig> eventsConfig = new HashMap<>();
 
@@ -36,7 +36,7 @@ public class RateLimiter {
     this.hashingSecret = hashingSecret;
     JedisPool jedisPool = new JedisPool(jedisConf.getPoolConfig(), jedisConf.getHost(), jedisConf.getPort(),
         jedisConf.getTimeout(), jedisConf.getPassword(), jedisConf.getDatabase(), jedisConf.getClientName());
-    redisDao = new RedisDao(jedisPool);
+    eventsRedisRepository = new EventsRedisRepository(jedisPool);
     validateEventsConfig(eventConfigs);
     eventsConfig.putAll(Stream.of(eventConfigs).collect(Collectors.toMap(EventConfig::getEventId, Function.identity())));
   }
@@ -70,15 +70,15 @@ public class RateLimiter {
       EventConfig eventConfig = eventsConfig.get(eventId);
       Duration eventTime = eventConfig.getMinTime();
       Long eventMaxIntents = eventConfig.getMaxIntents();
-      Long eventIntents = redisDao.getListLength(eventId, hashedKey);
+      Long eventIntents = eventsRedisRepository.getListLength(eventId, hashedKey);
       if (eventIntents != null && eventIntents >= eventMaxIntents) {
         logger.debug("Checking dates");
-        Instant firstDate = redisDao.getListFirstEventElement(eventId, hashedKey, eventMaxIntents);
+        Instant firstDate = eventsRedisRepository.getListFirstEventElement(eventId, hashedKey, eventMaxIntents);
 
         long millisDifference = ChronoUnit.MILLIS.between(firstDate, Instant.now());
 
         if (millisDifference > eventTime.toMillis()) {
-          redisDao.removeListFirstElement(eventId, hashedKey);
+          eventsRedisRepository.removeListFirstElement(eventId, hashedKey);
           logger.info("Event [{}] could be performed [{}/{}]", eventId, eventIntents, eventMaxIntents);
           confirm = true;
         }
@@ -107,7 +107,7 @@ public class RateLimiter {
     if (isValidRequest(eventId, key)) {
       EventConfig eventConfig = eventsConfig.get(eventId);
 
-      redisDao.addEvent(eventId, hashText(key), eventConfig.getMinTime());
+      eventsRedisRepository.addEvent(eventId, hashText(key), eventConfig.getMinTime());
       logger.info("Event [{}] recorded", eventId);
       eventRecorded = true;
     }
@@ -125,7 +125,7 @@ public class RateLimiter {
   public boolean reset(String eventId, String key) {
     boolean eventDeleted = false;
     if (isValidRequest(eventId, key)) {
-      redisDao.remove(eventId, hashText(key));
+      eventsRedisRepository.remove(eventId, hashText(key));
       logger.info("Event [{}] deleted", eventId);
       eventDeleted = true;
     }

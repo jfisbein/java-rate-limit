@@ -8,9 +8,12 @@ import org.sputnik.ratelimit.util.Constants;
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisPool;
 
-public class RedisDao {
+/**
+ * Repository to manage Events persistence.
+ */
+public class EventsRedisRepository {
 
-  private static final Logger logger = LoggerFactory.getLogger(RedisDao.class);
+  private static final Logger logger = LoggerFactory.getLogger(EventsRedisRepository.class);
   protected final JedisPool jedisPool;
 
   /**
@@ -18,7 +21,7 @@ public class RedisDao {
    *
    * @param jedisPool Jedis Pool.
    */
-  public RedisDao(JedisPool jedisPool) {
+  public EventsRedisRepository(JedisPool jedisPool) {
     this.jedisPool = jedisPool;
   }
 

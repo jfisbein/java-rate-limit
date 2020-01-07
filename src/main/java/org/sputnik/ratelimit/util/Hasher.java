@@ -21,6 +21,7 @@ public class Hasher {
    * @return hashed string.
    * @throws NoSuchAlgorithmException if no Provider supports a MacSpi implementation for the specified algorithm.
    * @throws InvalidKeyException if the given key is inappropriate for initializing this MAC.
+   * @throws UnsupportedEncodingException In the very rare case that <code>UTF-8</code> is not supported.
    */
   public static String convertToHmacSHA256(String text, String secret)
       throws NoSuchAlgorithmException, InvalidKeyException, UnsupportedEncodingException {
