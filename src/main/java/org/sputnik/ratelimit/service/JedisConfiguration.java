@@ -23,5 +23,5 @@ public class JedisConfiguration {
   @Default
   private int database = Protocol.DEFAULT_DATABASE;
   @Default
-  private String clientName = null;
+  private String clientName = "rate-limiter";
 }
