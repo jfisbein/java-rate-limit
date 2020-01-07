@@ -32,10 +32,17 @@ class LoginManager {
   }
 } 
 ```
+
 Maven & Gradle
 --------------
 
-you can integrate the library in mave or gradle using JitPack: https://jitpack.io/#jfisbein/java-rate-limit
+You can integrate the library in mave or gradle using JitPack: https://jitpack.io/#jfisbein/java-rate-limit
+
+
+Javadoc
+-------
+Javadoc is available at https://javadoc.jitpack.io/com/github/jfisbein/java-rate-limit/latest/javadoc/index.html
+
 
 Limitations
 -----------
