@@ -3,7 +3,6 @@ package org.sputnik.ratelimit.dao;
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertNull;
 
-import java.text.SimpleDateFormat;
 import java.time.Duration;
 import java.util.concurrent.TimeUnit;
 import org.apache.commons.lang3.RandomStringUtils;
@@ -19,8 +18,6 @@ import redis.clients.jedis.JedisPool;
 
 @Testcontainers
 public class EventsRedisRepositoryTest {
-
-  private final SimpleDateFormat sdf = new SimpleDateFormat("yyyy-MM-dd HH:mm:ss");
 
   private static final String TEST_KEY = RandomStringUtils.randomAlphanumeric(5);
 

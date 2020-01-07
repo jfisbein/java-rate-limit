@@ -38,7 +38,7 @@ public class RateLimiterTest {
     eventsConfig.add(new EventConfig("logMessageTest", 3, Duration.ofSeconds(2)));
 
     vcs = new RateLimiter(JedisConfiguration.builder().port(redis.getMappedPort(6379)).host(redis.getContainerIpAddress()).build(),
-        "hashsecret", eventsConfig.toArray(new EventConfig[0]));
+        "hashSecret", eventsConfig.toArray(new EventConfig[0]));
   }
 
   @Test

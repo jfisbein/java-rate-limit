@@ -136,8 +136,8 @@ public class RateLimiter {
   /**
    * Hash text using Hasher utility class.
    *
-   * @param text Texto to be hashed
-   * @return Hased text
+   * @param text Texto to be hashed.
+   * @return Hashed text.
    * @see Hasher
    */
   private String hashText(String text) {
@@ -153,7 +153,7 @@ public class RateLimiter {
   }
 
   /**
-   * Validates the request. Checks if the key is not blank and the eventId is configured.
+   * Validates the request. Checks if the key is not blank, and the eventId is configured.
    */
   private boolean isValidRequest(String eventId, String key) {
     boolean valid = false;
