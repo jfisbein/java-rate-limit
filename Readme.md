@@ -17,17 +17,17 @@ class LoginManager {
   private boolean doLogin(String username, String password) {
     boolean isValid = false;
     if (vc.canDoEvent("testLogin", username)) {
-	  vc.doEvent("testLogin", username);
-	  // check credentials and set isValid value
-	} else {
-	  log.warn("User " + username + " blocked due to exceeding number of login attempts");
-	}
+      vc.doEvent("testLogin", username);
+      // check credentials and set isValid value
+    } else {
+      log.warn("User " + username + " blocked due to exceeding number of login attempts");
+    }
 		
-	if (isValid) {
-	  vc.reset("testLogin", username);
-	}
+    if (isValid) {
+      vc.reset("testLogin", username);
+    }
 		
-	return isValid;
+    return isValid;
   }
 } 
 ```
