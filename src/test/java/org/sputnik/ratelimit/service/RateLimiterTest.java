@@ -1,7 +1,10 @@
 package org.sputnik.ratelimit.service;
 
 
+import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
+import static org.junit.jupiter.api.Assertions.assertNotNull;
+import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
 import java.time.Duration;
@@ -13,6 +16,7 @@ import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
 import org.slf4j.LoggerFactory;
 import org.sputnik.ratelimit.exeception.DuplicatedEventKeyException;
+import org.sputnik.ratelimit.service.CanDoResponse.Reason;
 import org.sputnik.ratelimit.util.EventConfig;
 import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.junit.jupiter.Container;
@@ -47,20 +51,20 @@ public class RateLimiterTest {
     String testKey = "my_test_key";
 
     // 0
-    assertTrue(vcs.canDoEvent(testEventId, testKey));
+    assertTrue(vcs.canDoEvent(testEventId, testKey).getCanDo());
 
     assertTrue(vcs.doEvent(testEventId, testKey)); // 1
-    assertTrue(vcs.canDoEvent(testEventId, testKey));
+    assertTrue(vcs.canDoEvent(testEventId, testKey).getCanDo());
 
     assertTrue(vcs.doEvent(testEventId, testKey)); // 2
-    assertTrue(vcs.canDoEvent(testEventId, testKey));
+    assertTrue(vcs.canDoEvent(testEventId, testKey).getCanDo());
 
     assertTrue(vcs.doEvent(testEventId, testKey)); // 3
-    assertFalse(vcs.canDoEvent(testEventId, testKey));
+    assertFalse(vcs.canDoEvent(testEventId, testKey).getCanDo());
 
     // Wait for the event attempts to expire
     TimeUnit.MILLISECONDS.sleep(2500);
-    assertTrue(vcs.canDoEvent(testEventId, testKey));
+    assertTrue(vcs.canDoEvent(testEventId, testKey).getCanDo());
   }
 
   @Test
@@ -69,58 +73,58 @@ public class RateLimiterTest {
     String testKey = "my_test_key_2";
 
     // 0
-    assertTrue(vcs.canDoEvent(testEventId, testKey));
+    assertTrue(vcs.canDoEvent(testEventId, testKey).getCanDo());
 
     assertTrue(vcs.doEvent(testEventId, testKey)); // 1
-    assertTrue(vcs.canDoEvent(testEventId, testKey));
+    assertTrue(vcs.canDoEvent(testEventId, testKey).getCanDo());
     TimeUnit.MILLISECONDS.sleep(300);
 
     assertTrue(vcs.doEvent(testEventId, testKey)); // 2
-    assertTrue(vcs.canDoEvent(testEventId, testKey));
+    assertTrue(vcs.canDoEvent(testEventId, testKey).getCanDo());
 
     TimeUnit.MILLISECONDS.sleep(300);
     assertTrue(vcs.doEvent(testEventId, testKey)); // 3
-    assertFalse(vcs.canDoEvent(testEventId, testKey));
+    assertFalse(vcs.canDoEvent(testEventId, testKey).getCanDo());
 
     // Wait for the event attempts to expire
     TimeUnit.MILLISECONDS.sleep(1600);
-    assertTrue(vcs.canDoEvent(testEventId, testKey));
+    assertTrue(vcs.canDoEvent(testEventId, testKey).getCanDo());
   }
 
   @Test
   void testCanDoEventNoEventId() {
     logger.info("CanDoEventTest: no correct eventId and no empty or null key");
-    assertFalse(vcs.canDoEvent("IncorrectLogin", "This is a test"));
+    assertFalse(vcs.canDoEvent("IncorrectLogin", "This is a test").getCanDo());
   }
 
   @Test
   void testCanDoEventCorrectEventId() {
     logger.info("CanDoEventTest: correct eventId and no empty or null key");
-    assertTrue(vcs.canDoEvent("testLogin", "This is a test"));
+    assertTrue(vcs.canDoEvent("testLogin", "This is a test").getCanDo());
   }
 
   @Test
   void testCanDoEventNoCorrectEventIdEmptyKey() {
     logger.info("CanDoEventTest: no correct eventId and empty key");
-    assertFalse(vcs.canDoEvent("IncorrectLogin", ""));
+    assertFalse(vcs.canDoEvent("IncorrectLogin", "").getCanDo());
   }
 
   @Test
   void testCanDoEventCorrectEventIdEmptyKey() {
     logger.info("CanDoEventTest: correct eventId and empty key");
-    assertFalse(vcs.canDoEvent("testLogin", ""));
+    assertFalse(vcs.canDoEvent("testLogin", "").getCanDo());
   }
 
   @Test
   void testCanDoEventCorrectEventIdNullKey() {
     logger.info("CanDoEventTest: correct eventId and empty key");
-    assertFalse(vcs.canDoEvent("testLogin", null));
+    assertFalse(vcs.canDoEvent("testLogin", null).getCanDo());
   }
 
   @Test
   void testCanDoEventNoCorrectEventIdNullKey() {
     logger.info("CanDoEventTest: no correct eventId and empty key");
-    assertFalse(vcs.canDoEvent("IncorrectLogin", null));
+    assertFalse(vcs.canDoEvent("IncorrectLogin", null).getCanDo());
   }
 
   @Test
@@ -201,5 +205,43 @@ public class RateLimiterTest {
         new RateLimiter(redis.getContainerIpAddress(), redis.getMappedPort(6379), "secret",
             new EventConfig("aaa", 3, Duration.ZERO),
             new EventConfig("aaa", 2, Duration.ofSeconds(5))));
+  }
+
+  @Test
+  void testWithResponse() {
+    CanDoResponse canDoResponse = vcs.canDoEvent("testLogin", "This is a test");
+    assertTrue(canDoResponse.getCanDo());
+    assertNull(canDoResponse.getReason());
+    assertEquals(0, canDoResponse.getWaitMillis());
+  }
+
+  @Test
+  void testWithResponseReject() throws InterruptedException {
+    CanDoResponse canDoResponse = vcs.canDoEvent("testLogin", "With Response Key");
+    assertTrue(canDoResponse.getCanDo());
+    assertNull(canDoResponse.getReason());
+    assertEquals(0, canDoResponse.getWaitMillis());
+
+    vcs.doEvent("testLogin", "With Response Key");
+    vcs.doEvent("testLogin", "With Response Key");
+    vcs.doEvent("testLogin", "With Response Key");
+    vcs.doEvent("testLogin", "With Response Key");
+
+    canDoResponse = vcs.canDoEvent("testLogin", "With Response Key");
+    assertFalse(canDoResponse.getCanDo());
+    assertEquals(Reason.TOO_MANY_EVENTS, canDoResponse.getReason());
+    assertTrue(canDoResponse.getWaitMillis() > 0);
+  }
+
+  @Test
+  void testGetEventConfig() {
+    EventConfig freeTrial = vcs.getEventConfig("freeTrial");
+    assertNotNull(freeTrial);
+  }
+
+  @Test
+  void testGetEventConfigNonExists() {
+    EventConfig freeTrial = vcs.getEventConfig("non.existing.event");
+    assertNull(freeTrial);
   }
 }

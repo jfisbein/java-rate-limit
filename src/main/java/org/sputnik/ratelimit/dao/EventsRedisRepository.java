@@ -4,7 +4,6 @@ import java.time.Duration;
 import java.time.Instant;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
-import org.sputnik.ratelimit.util.Constants;
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisPool;
 
@@ -14,6 +13,7 @@ import redis.clients.jedis.JedisPool;
 public class EventsRedisRepository {
 
   private static final Logger logger = LoggerFactory.getLogger(EventsRedisRepository.class);
+  protected static final String KEY_SEPARATOR = "-";
   protected final JedisPool jedisPool;
 
   /**
@@ -35,9 +35,9 @@ public class EventsRedisRepository {
   public void addEvent(String eventId, String key, Duration duration) {
     try (Jedis jedis = jedisPool.getResource()) {
 
-      jedis.rpush(eventId + Constants.KEY_SEPARATOR + key, Long.toString(System.currentTimeMillis()));
+      jedis.rpush(eventId + KEY_SEPARATOR + key, Long.toString(System.currentTimeMillis()));
       if (duration != null) {
-        jedis.expire(eventId + Constants.KEY_SEPARATOR + key, (int) duration.getSeconds());
+        jedis.expire(eventId + KEY_SEPARATOR + key, (int) duration.getSeconds());
       }
     }
   }
@@ -52,7 +52,7 @@ public class EventsRedisRepository {
   public Long getListLength(String eventId, String key) {
     Long result;
     try (Jedis jedis = jedisPool.getResource()) {
-      result = jedis.llen(eventId + Constants.KEY_SEPARATOR + key);
+      result = jedis.llen(eventId + KEY_SEPARATOR + key);
     }
 
     return result;
@@ -68,7 +68,7 @@ public class EventsRedisRepository {
   public Instant getListFirstElement(String eventId, String key) {
     Instant result;
     try (Jedis jedis = jedisPool.getResource()) {
-      String aux = jedis.lindex(eventId + Constants.KEY_SEPARATOR + key, 0);
+      String aux = jedis.lindex(eventId + KEY_SEPARATOR + key, 0);
       result = parseTimeStamp(aux);
     }
 
@@ -78,7 +78,7 @@ public class EventsRedisRepository {
   public Instant getListFirstEventElement(String eventId, String key, Long eventMaxIntents) {
     Instant result;
     try (Jedis jedis = jedisPool.getResource()) {
-      String redisKey = eventId + Constants.KEY_SEPARATOR + key;
+      String redisKey = eventId + KEY_SEPARATOR + key;
       long length = jedis.llen(redisKey);
       long index = Math.max(0, length - eventMaxIntents);
       String aux = jedis.lindex(redisKey, index);
@@ -99,7 +99,7 @@ public class EventsRedisRepository {
     Instant result = null;
     String aux;
     try (Jedis jedis = jedisPool.getResource()) {
-      aux = jedis.lpop(eventId + Constants.KEY_SEPARATOR + key);
+      aux = jedis.lpop(eventId + KEY_SEPARATOR + key);
       if (aux != null) {
         result = parseTimeStamp(aux);
       }
@@ -128,7 +128,7 @@ public class EventsRedisRepository {
    */
   public void remove(String eventId, String key) {
     try (Jedis jedis = jedisPool.getResource()) {
-      jedis.del(eventId + Constants.KEY_SEPARATOR + key);
+      jedis.del(eventId + KEY_SEPARATOR + key);
     }
   }
 }

@@ -14,6 +14,8 @@ import org.apache.commons.lang3.StringUtils;
 import org.slf4j.LoggerFactory;
 import org.sputnik.ratelimit.dao.EventsRedisRepository;
 import org.sputnik.ratelimit.exeception.DuplicatedEventKeyException;
+import org.sputnik.ratelimit.service.CanDoResponse.CanDoResponseBuilder;
+import org.sputnik.ratelimit.service.CanDoResponse.Reason;
 import org.sputnik.ratelimit.util.EventConfig;
 import org.sputnik.ratelimit.util.Hasher;
 import redis.clients.jedis.JedisPool;
@@ -58,11 +60,10 @@ public class RateLimiter {
    *
    * @param eventId Event identifier.
    * @param key event execution key.
-   * @return <code>true</code> if the event can be done, <code>false</code> otherwise.
+   * @return Response object with information about if the event can be done, and the reason and wait time if it cannot be done.
    */
-  public boolean canDoEvent(String eventId, String key) {
-    boolean confirm = false;
-
+  public CanDoResponse canDoEvent(String eventId, String key) {
+    CanDoResponseBuilder builder = CanDoResponse.builder();
     if (isValidRequest(eventId, key)) {
       String hashedKey = hashText(key);
       logger.debug("Event ({}) exists, checking if it could be performed", eventId);
@@ -80,19 +81,28 @@ public class RateLimiter {
         if (millisDifference > eventTime.toMillis()) {
           eventsRedisRepository.removeListFirstElement(eventId, hashedKey);
           logger.info("Event [{}] could be performed [{}/{}]", eventId, eventIntents, eventMaxIntents);
-          confirm = true;
+          builder.canDo(true);
+        } else {
+          builder.reason(Reason.TOO_MANY_EVENTS);
+          builder.waitMillis(eventTime.toMillis() - millisDifference);
+          builder.canDo(false);
         }
       } else {
         logger.info("Event [{}] could be performed [{}/{}]", eventId, eventIntents, eventMaxIntents);
-        confirm = true;
+        builder.canDo(true);
       }
+    } else {
+      builder.reason(Reason.INVALID_REQUEST);
+      builder.canDo(false);
     }
 
-    if (!confirm) {
+    CanDoResponse response = builder.build();
+
+    if (!response.getCanDo()) {
       logger.info("The event: {} could NOT be performed", eventId);
     }
 
-    return confirm;
+    return response;
   }
 
   /**
@@ -131,6 +141,16 @@ public class RateLimiter {
     }
 
     return eventDeleted;
+  }
+
+  /**
+   * Get information about an event.
+   *
+   * @param eventId Event identifier.
+   * @return Event configuration.
+   */
+  public EventConfig getEventConfig(String eventId) {
+    return eventsConfig.get(eventId);
   }
 
   /**
