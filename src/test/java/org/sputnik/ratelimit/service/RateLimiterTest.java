@@ -216,7 +216,7 @@ public class RateLimiterTest {
   }
 
   @Test
-  void testWithResponseReject() throws InterruptedException {
+  void testWithResponseReject() {
     CanDoResponse canDoResponse = vcs.canDoEvent("testLogin", "With Response Key");
     assertTrue(canDoResponse.getCanDo());
     assertNull(canDoResponse.getReason());

@@ -17,7 +17,7 @@ class LoginManager {
 	
   private boolean doLogin(String username, String password) {
     boolean isValid = false;
-    if (vc.canDoEvent("testLogin", username)) {
+    if (vc.canDoEvent("testLogin", username).getCanDo()) {
       vc.doEvent("testLogin", username);
       // check credentials and set isValid value
     } else {
