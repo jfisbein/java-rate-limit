@@ -1,4 +1,5 @@
-![](https://github.com/jfisbein/java-rate-limit/workflows/Java%20CI/badge.svg)
+![https://github.com/jfisbein/java-rate-limit](https://github.com/jfisbein/java-rate-limit/workflows/Java%20CI/badge.svg)
+![https://jitpack.io/#jfisbein/java-rate-limit](https://jitpack.io/v/jfisbein/java-rate-limit.svg)
 
 java-rate-limit
 =================
