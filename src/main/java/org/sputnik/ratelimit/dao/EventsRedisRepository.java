@@ -35,9 +35,9 @@ public class EventsRedisRepository {
   public void addEvent(String eventId, String key, Duration duration) {
     try (Jedis jedis = jedisPool.getResource()) {
 
-      jedis.rpush(eventId + KEY_SEPARATOR + key, Long.toString(System.currentTimeMillis()));
+      jedis.rpush(eventKey(eventId, key), Long.toString(System.currentTimeMillis()));
       if (duration != null) {
-        jedis.expire(eventId + KEY_SEPARATOR + key, (int) duration.getSeconds());
+        jedis.expire(eventKey(eventId, key), (int) duration.getSeconds());
       }
     }
   }
@@ -52,7 +52,7 @@ public class EventsRedisRepository {
   public Long getListLength(String eventId, String key) {
     Long result;
     try (Jedis jedis = jedisPool.getResource()) {
-      result = jedis.llen(eventId + KEY_SEPARATOR + key);
+      result = jedis.llen(eventKey(eventId, key));
     }
 
     return result;
@@ -68,7 +68,7 @@ public class EventsRedisRepository {
   public Instant getListFirstElement(String eventId, String key) {
     Instant result;
     try (Jedis jedis = jedisPool.getResource()) {
-      String aux = jedis.lindex(eventId + KEY_SEPARATOR + key, 0);
+      String aux = jedis.lindex(eventKey(eventId, key), 0);
       result = parseTimeStamp(aux);
     }
 
@@ -78,7 +78,7 @@ public class EventsRedisRepository {
   public Instant getListFirstEventElement(String eventId, String key, Long eventMaxIntents) {
     Instant result;
     try (Jedis jedis = jedisPool.getResource()) {
-      String redisKey = eventId + KEY_SEPARATOR + key;
+      String redisKey = eventKey(eventId, key);
       long length = jedis.llen(redisKey);
       long index = Math.max(0, length - eventMaxIntents);
       String aux = jedis.lindex(redisKey, index);
@@ -99,7 +99,7 @@ public class EventsRedisRepository {
     Instant result = null;
     String aux;
     try (Jedis jedis = jedisPool.getResource()) {
-      aux = jedis.lpop(eventId + KEY_SEPARATOR + key);
+      aux = jedis.lpop(eventKey(eventId, key));
       if (aux != null) {
         result = parseTimeStamp(aux);
       }
@@ -128,7 +128,11 @@ public class EventsRedisRepository {
    */
   public void remove(String eventId, String key) {
     try (Jedis jedis = jedisPool.getResource()) {
-      jedis.del(eventId + KEY_SEPARATOR + key);
+      jedis.del(eventKey(eventId, key));
     }
+  }
+
+  private String eventKey(String eventId, String key) {
+    return eventId + KEY_SEPARATOR + key;
   }
 }
