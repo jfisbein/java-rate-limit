@@ -3,7 +3,7 @@
   xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
   <artifactId>java-rate-limit</artifactId>
-  <version>1.1.1</version>
+  <version>1.2.0</version>
   <groupId>org.sputnik</groupId>
   <name>java-rate-limit</name>
   <description>Java library to help to implement rate limits.</description>
