@@ -3,14 +3,16 @@ package org.sputnik.ratelimit.service;
 
 import static org.junit.jupiter.api.Assertions.assertEquals;
 import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNotNull;
 import static org.junit.jupiter.api.Assertions.assertNull;
 import static org.junit.jupiter.api.Assertions.assertTrue;
 
+import java.io.IOException;
 import java.time.Duration;
 import java.util.ArrayList;
 import java.util.List;
+import java.util.Optional;
 import java.util.concurrent.TimeUnit;
+import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.Test;
@@ -46,6 +48,11 @@ public class RateLimiterTest {
         "hashSecret", eventsConfig.toArray(new EventConfig[0]));
   }
 
+  @AfterAll
+  static void tearDown() throws IOException {
+    vcs.close();
+  }
+
   @Test
   void testCanDoEventFullFlow() throws InterruptedException {
     String testEventId = "logMessageTest";
@@ -64,7 +71,7 @@ public class RateLimiterTest {
     assertFalse(vcs.canDoEvent(testEventId, testKey).getCanDo());
 
     // Wait for the event attempts to expire
-    TimeUnit.MILLISECONDS.sleep(2500);
+    TimeUnit.MILLISECONDS.sleep(2200);
     assertTrue(vcs.canDoEvent(testEventId, testKey).getCanDo());
   }
 
@@ -236,13 +243,13 @@ public class RateLimiterTest {
 
   @Test
   void testGetEventConfig() {
-    EventConfig freeTrial = vcs.getEventConfig("freeTrial");
-    assertNotNull(freeTrial);
+    Optional<EventConfig> eventConfig = vcs.getEventConfig("freeTrial");
+    assertTrue(eventConfig.isPresent());
   }
 
   @Test
   void testGetEventConfigNonExists() {
-    EventConfig freeTrial = vcs.getEventConfig("non.existing.event");
-    assertNull(freeTrial);
+    Optional<EventConfig> eventConfig = vcs.getEventConfig("non.existing.event");
+    assertFalse(eventConfig.isPresent());
   }
 }

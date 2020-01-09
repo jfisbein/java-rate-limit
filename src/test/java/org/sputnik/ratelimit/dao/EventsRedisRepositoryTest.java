@@ -50,7 +50,7 @@ public class EventsRedisRepositoryTest {
 
   @Test
   public void testAddEventExpiration() throws InterruptedException {
-    eventsRedisRepository.addEvent(TEST_EVENT_ID, TEST_KEY, Duration.ofSeconds(1));
+    eventsRedisRepository.addEvent(TEST_EVENT_ID, TEST_KEY, Duration.ofMillis(1000));
     assertEquals(1, redisClient.llen(eventKey(TEST_EVENT_ID, TEST_KEY)).intValue());
     TimeUnit.MILLISECONDS.sleep(1200);
     assertEquals(0, redisClient.llen(eventKey(TEST_EVENT_ID, TEST_KEY)).intValue());
@@ -75,9 +75,9 @@ public class EventsRedisRepositoryTest {
   @Test
   public void testGetListFirstElement() throws InterruptedException {
     eventsRedisRepository.addEvent(TEST_EVENT_ID, TEST_KEY, TEST_TIMEOUT);
-    TimeUnit.MILLISECONDS.sleep(500);
+    TimeUnit.MILLISECONDS.sleep(100);
     eventsRedisRepository.addEvent(TEST_EVENT_ID, TEST_KEY, TEST_TIMEOUT);
-    TimeUnit.MILLISECONDS.sleep(500);
+    TimeUnit.MILLISECONDS.sleep(100);
     eventsRedisRepository.addEvent(TEST_EVENT_ID, TEST_KEY, TEST_TIMEOUT);
     assertEquals(3, eventsRedisRepository.getListLength(TEST_EVENT_ID, TEST_KEY).intValue());
     String firstElement = redisClient.lindex(eventKey(TEST_EVENT_ID, TEST_KEY), 0);
@@ -94,9 +94,9 @@ public class EventsRedisRepositoryTest {
   @Test
   public void testGetListFirstEventElement() throws InterruptedException {
     eventsRedisRepository.addEvent(TEST_EVENT_ID, TEST_KEY, TEST_TIMEOUT);
-    TimeUnit.MILLISECONDS.sleep(500);
+    TimeUnit.MILLISECONDS.sleep(100);
     eventsRedisRepository.addEvent(TEST_EVENT_ID, TEST_KEY, TEST_TIMEOUT);
-    TimeUnit.MILLISECONDS.sleep(500);
+    TimeUnit.MILLISECONDS.sleep(100);
     eventsRedisRepository.addEvent(TEST_EVENT_ID, TEST_KEY, TEST_TIMEOUT);
     assertEquals(3, eventsRedisRepository.getListLength(TEST_EVENT_ID, TEST_KEY).intValue());
     String firstElement = redisClient.lindex(eventKey(TEST_EVENT_ID, TEST_KEY), 1);
@@ -113,9 +113,9 @@ public class EventsRedisRepositoryTest {
   @Test
   public void testRemoveListFirstElement() throws InterruptedException {
     eventsRedisRepository.addEvent(TEST_EVENT_ID, TEST_KEY, TEST_TIMEOUT);
-    TimeUnit.MILLISECONDS.sleep(500);
+    TimeUnit.MILLISECONDS.sleep(100);
     eventsRedisRepository.addEvent(TEST_EVENT_ID, TEST_KEY, TEST_TIMEOUT);
-    TimeUnit.MILLISECONDS.sleep(500);
+    TimeUnit.MILLISECONDS.sleep(100);
     eventsRedisRepository.addEvent(TEST_EVENT_ID, TEST_KEY, TEST_TIMEOUT);
     assertEquals(3, eventsRedisRepository.getListLength(TEST_EVENT_ID, TEST_KEY).intValue());
     String firstElement = redisClient.lindex(eventKey(TEST_EVENT_ID, TEST_KEY), 0);
