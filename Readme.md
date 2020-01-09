@@ -50,4 +50,4 @@ Javadoc is available at https://javadoc.jitpack.io/com/github/jfisbein/java-rate
 Limitations
 -----------
 
-Some edge race conditions could lead to get a false positive or negative response from the method `canDoEvent`. 
+As no synchronization is implemented, some edge race conditions could lead to get a false positive or negative response from the method `canDoEvent`. 
