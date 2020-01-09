@@ -1,4 +1,4 @@
-package org.sputnik.ratelimit.service;
+package org.sputnik.ratelimit.domain;
 
 import lombok.Builder;
 import lombok.Getter;
