@@ -1,3 +1,5 @@
+![](https://github.com/jfisbein/java-rate-limit/workflows/Java%20CI/badge.svg)
+
 java-rate-limit
 =================
 
