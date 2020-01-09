@@ -3,7 +3,7 @@ package org.sputnik.ratelimit.service;
 import lombok.Builder;
 import lombok.Builder.Default;
 import lombok.Getter;
-import org.apache.commons.pool2.impl.GenericObjectPoolConfig;
+import redis.clients.jedis.JedisPoolConfig;
 import redis.clients.jedis.Protocol;
 
 @Builder
@@ -11,7 +11,7 @@ import redis.clients.jedis.Protocol;
 public class JedisConfiguration {
 
   @Default
-  private GenericObjectPoolConfig poolConfig = new GenericObjectPoolConfig();
+  private JedisPoolConfig poolConfig = new JedisPoolConfig();
   @Default
   private String host = Protocol.DEFAULT_HOST;
   @Default
