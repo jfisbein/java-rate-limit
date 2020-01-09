@@ -1,16 +1,18 @@
 package org.sputnik.ratelimit.service;
 
+import java.io.Closeable;
+import java.io.IOException;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
 import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
+import java.util.Optional;
 import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
-import org.apache.commons.lang3.StringUtils;
 import org.slf4j.LoggerFactory;
 import org.sputnik.ratelimit.dao.EventsRedisRepository;
 import org.sputnik.ratelimit.domain.CanDoResponse;
@@ -21,12 +23,13 @@ import org.sputnik.ratelimit.util.EventConfig;
 import org.sputnik.ratelimit.util.Hasher;
 import redis.clients.jedis.JedisPool;
 
-public class RateLimiter {
+public class RateLimiter implements Closeable {
 
   private static final org.slf4j.Logger logger = LoggerFactory.getLogger(RateLimiter.class);
   private final EventsRedisRepository eventsRedisRepository;
   private final String hashingSecret;
   private final Map<String, EventConfig> eventsConfig = new HashMap<>();
+  private JedisPool jedisPool;
 
   /**
    * Constructor.
@@ -37,7 +40,7 @@ public class RateLimiter {
    */
   public RateLimiter(JedisConfiguration jedisConf, String hashingSecret, EventConfig... eventConfigs) {
     this.hashingSecret = hashingSecret;
-    JedisPool jedisPool = new JedisPool(jedisConf.getPoolConfig(), jedisConf.getHost(), jedisConf.getPort(),
+    jedisPool = new JedisPool(jedisConf.getPoolConfig(), jedisConf.getHost(), jedisConf.getPort(),
         jedisConf.getTimeout(), jedisConf.getPassword(), jedisConf.getDatabase(), jedisConf.getClientName());
     eventsRedisRepository = new EventsRedisRepository(jedisPool);
     validateEventsConfig(eventConfigs);
@@ -61,7 +64,8 @@ public class RateLimiter {
    *
    * @param eventId Event identifier.
    * @param key event execution key.
-   * @return Response object with information about if the event can be done, and the reason and wait time if it cannot be done.
+   * @return Response object with information about if the event can be done, the reason, and wait time if it cannot be done because
+   * exceeding event limits.
    */
   public CanDoResponse canDoEvent(String eventId, String key) {
     CanDoResponseBuilder builder = CanDoResponse.builder();
@@ -150,8 +154,8 @@ public class RateLimiter {
    * @param eventId Event identifier.
    * @return Event configuration.
    */
-  public EventConfig getEventConfig(String eventId) {
-    return eventsConfig.get(eventId);
+  public Optional<EventConfig> getEventConfig(String eventId) {
+    return Optional.ofNullable(eventsConfig.get(eventId));
   }
 
   /**
@@ -178,7 +182,7 @@ public class RateLimiter {
    */
   private boolean isValidRequest(String eventId, String key) {
     boolean valid = false;
-    if (StringUtils.isNotBlank(key)) {
+    if (isNotBlank(key)) {
       logger.debug("Checking the existence of event: {}", eventId);
       if (eventsConfig.containsKey(eventId)) {
         valid = true;
@@ -207,5 +211,63 @@ public class RateLimiter {
       }
       keys.add(eventId);
     }
+  }
+
+  /**
+   * <p>Checks if a CharSequence is empty (""), null or whitespace only.</p>
+   *
+   * <p>Whitespace is defined by {@link Character#isWhitespace(char)}.</p>
+   *
+   * <p><strong>Copied from Apache Commons StringUtils</strong></p>
+   *
+   * <pre>
+   * isBlank(null)      = true
+   * isBlank("")        = true
+   * isBlank(" ")       = true
+   * isBlank("bob")     = false
+   * isBlank("  bob  ") = false
+   * </pre>
+   *
+   * @param cs the CharSequence to check, may be null
+   * @return {@code true} if the CharSequence is null, empty or whitespace only
+   */
+  private boolean isBlank(CharSequence cs) {
+    int strLen;
+    if (cs == null || (strLen = cs.length()) == 0) {
+      return true;
+    }
+    for (int i = 0; i < strLen; i++) {
+      if (!Character.isWhitespace(cs.charAt(i))) {
+        return false;
+      }
+    }
+    return true;
+  }
+
+  /**
+   * <p>Checks if a CharSequence is not empty (""), not null and not whitespace only.</p>
+   *
+   * <p>Whitespace is defined by {@link Character#isWhitespace(char)}.</p>
+   *
+   * <p><strong>Copied from Apache Commons StringUtils</strong></p>
+   *
+   * <pre>
+   * isNotBlank(null)      = false
+   * isNotBlank("")        = false
+   * isNotBlank(" ")       = false
+   * isNotBlank("bob")     = true
+   * isNotBlank("  bob  ") = true
+   * </pre>
+   *
+   * @param cs the CharSequence to check, may be null
+   * @return {@code true} if the CharSequence is not empty and not null and not whitespace only
+   */
+  private boolean isNotBlank(CharSequence cs) {
+    return !isBlank(cs);
+  }
+
+  @Override
+  public void close() throws IOException {
+    jedisPool.close();
   }
 }
