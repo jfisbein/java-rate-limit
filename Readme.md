@@ -10,21 +10,22 @@ Usage
 -----
 
 ```java
-import org.sputnik.ratelimit.service.JedisConfiguration;
+import org.sputnik.ratelimit.domain.CanDoResponse;import org.sputnik.ratelimit.service.JedisConfiguration;
 import org.sputnik.ratelimit.service.RateLimiter;
 
 class LoginManager {
     // Configure rate limiter to allow maximum 3 attempts every hour.
-  RateLimiter vc = new Limiter(JedisConfiguration.builder().setHost("localhost").build(), 
+  RateLimiter vc = new RateLimiter(JedisConfiguration.builder().setHost("localhost").build(), 
 		new EventConfig("testLogin", 3, Duration.ofSeconds(3600)));
 	
   private boolean doLogin(String username, String password) {
     boolean isValid = false;
-    if (vc.canDoEvent("testLogin", username).getCanDo()) {
+    CanDoResponse response = vc.canDoEvent("testLogin", username);
+    if (response.getCanDo()) {
       vc.doEvent("testLogin", username);
-      // check credentials and set isValid value
+      // TODO: check credentials and set isValid value
     } else {
-      log.warn("User " + username + " blocked due to exceeding number of login attempts");
+      log.warn("User " + username + " blocked due to exceeding number of login attempt, for " + (response.getWaitMillis()/1000) + " seconds");
     }
 		
     if (isValid) {
