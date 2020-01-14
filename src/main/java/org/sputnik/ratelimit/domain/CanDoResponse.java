@@ -10,6 +10,7 @@ public class CanDoResponse {
   private boolean canDo;
   private long waitMillis;
   private Reason reason;
+  private long eventsIntents;
 
   public enum Reason {INVALID_REQUEST, TOO_MANY_EVENTS}
 }

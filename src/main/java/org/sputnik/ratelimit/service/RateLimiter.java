@@ -64,8 +64,8 @@ public class RateLimiter implements Closeable {
    *
    * @param eventId Event identifier.
    * @param key event execution key.
-   * @return Response object with information about if the event can be done, the reason, and wait time if it cannot be done because
-   * exceeding event limits.
+   * @return Response object with information about if the event can be done, the reason, and wait time if it cannot be done because exceeding event
+   * limits.
    */
   public CanDoResponse canDoEvent(String eventId, String key) {
     CanDoResponseBuilder builder = CanDoResponse.builder();
@@ -77,8 +77,10 @@ public class RateLimiter implements Closeable {
       Duration eventTime = eventConfig.getMinTime();
       Long eventMaxIntents = eventConfig.getMaxIntents();
       Long eventIntents = eventsRedisRepository.getListLength(eventId, hashedKey);
+
       if (eventIntents != null && eventIntents >= eventMaxIntents) {
         logger.debug("Checking dates");
+        builder.eventsIntents(eventIntents);
         Instant firstDate = eventsRedisRepository.getListFirstEventElement(eventId, hashedKey, eventMaxIntents);
 
         long millisDifference = ChronoUnit.MILLIS.between(firstDate, Instant.now());
@@ -94,6 +96,7 @@ public class RateLimiter implements Closeable {
         }
       } else {
         logger.info("Event [{}] could be performed [{}/{}]", eventId, eventIntents, eventMaxIntents);
+        builder.eventsIntents(eventIntents != null ? eventIntents : 0L);
         builder.canDo(true);
       }
     } else {
