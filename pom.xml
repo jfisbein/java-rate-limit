@@ -24,6 +24,17 @@
     <developerConnection>scm:git:git@github.com:jfisbein/java-rate-limit.git</developerConnection>
   </scm>
 
+  <!-- Contact for developers on project -->
+  <developers>
+    <developer>
+      <name>Joan Fisbein</name>
+      <!-- Your organization, or Github is fine too -->
+      <organization>Github</organization>
+      <!-- URL for Organization, URL to your github profile work well here -->
+      <organizationUrl>https://github.com/jfisbein</organizationUrl>
+    </developer>
+  </developers>
+
   <properties>
     <java.version>1.8</java.version>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
