@@ -40,7 +40,21 @@ class LoginManager {
 Maven & Gradle
 --------------
 
-You can integrate the library in mave or gradle using JitPack: https://jitpack.io/#jfisbein/java-rate-limit
+For **maven** integration simply add this dependency to your `pom.xml`:
+```xml
+<dependency>
+    <groupId>net.saltando</groupId>
+    <artifactId>java-rate-limit</artifactId>
+    <version>x.y.z</version>
+</dependency>
+```
+
+For **gradle** integration simply add this dependency:
+```groovy
+compile 'net.saltando:java-rate-limit:x.y.z'
+```
+
+Where x.y.x is the desired version, always lastest versions is recomended, you can it at [Releases](/jfisbein/java-rate-limit/releases) tab.
 
 
 Javadoc
@@ -51,4 +65,4 @@ Javadoc is available at https://javadoc.jitpack.io/com/github/jfisbein/java-rate
 Limitations
 -----------
 
-As no synchronization is implemented, some edge race conditions could lead to get a false positive or negative response from the method `canDoEvent`. 
+As no synchronization method is implemented, some edge race conditions could lead to get a false positive or negative response from the method `canDoEvent`. 
