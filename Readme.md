@@ -54,7 +54,7 @@ For **gradle** integration simply add this dependency:
 compile 'net.saltando:java-rate-limit:x.y.z'
 ```
 
-Where x.y.x is the desired version, always lastest versions is recommended, you can find it at [Releases](/releases) tab.
+Where x.y.x is the desired version, always lastest versions is recommended, you can find it at [Releases](https://github.com/jfisbein/java-rate-limit/releases) tab.
 
 
 Javadoc
