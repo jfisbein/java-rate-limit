@@ -3,7 +3,7 @@
   xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
   <artifactId>java-rate-limit</artifactId>
-  <version>1.4.1</version>
+  <version>1.4.2</version>
   <groupId>net.saltando</groupId>
   <name>java-rate-limit</name>
   <description>Java library to help to implement rate limits.</description>
@@ -42,12 +42,12 @@
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
     <maven.compiler.source>${java.version}</maven.compiler.source>
     <maven.compiler.target>${java.version}</maven.compiler.target>
-    <junit.version>5.5.2</junit.version>
+    <junit.version>5.6.2</junit.version>
     <slf4j.version>1.7.30</slf4j.version>
-    <jedis.version>3.2.0</jedis.version>
-    <commons-lang.version>3.9</commons-lang.version>
-    <lombok.version>1.18.10</lombok.version>
-    <testcontainers.version>1.12.4</testcontainers.version>
+    <jedis.version>3.3.0</jedis.version>
+    <commons-lang.version>3.10</commons-lang.version>
+    <lombok.version>1.18.12</lombok.version>
+    <testcontainers.version>1.14.1</testcontainers.version>
     <delombok.output>target/generated-sources/delombok</delombok.output>
   </properties>
 
@@ -137,7 +137,7 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-jar-plugin</artifactId>
-        <version>3.1.2</version>
+        <version>3.2.0</version>
         <configuration>
           <archive>
             <manifest>
@@ -189,7 +189,7 @@
           <plugin>
             <groupId>org.apache.maven.plugins</groupId>
             <artifactId>maven-source-plugin</artifactId>
-            <version>3.1.0</version>
+            <version>3.2.1</version>
             <executions>
               <execution>
                 <id>attach-sources</id>
@@ -204,7 +204,7 @@
           <plugin>
             <groupId>org.apache.maven.plugins</groupId>
             <artifactId>maven-javadoc-plugin</artifactId>
-            <version>3.1.1</version>
+            <version>3.2.0</version>
             <executions>
               <execution>
                 <id>attach-javadocs</id>
