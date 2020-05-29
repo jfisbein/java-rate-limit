@@ -47,7 +47,7 @@
     <jedis.version>3.3.0</jedis.version>
     <commons-lang.version>3.10</commons-lang.version>
     <lombok.version>1.18.12</lombok.version>
-    <testcontainers.version>1.14.1</testcontainers.version>
+    <testcontainers.version>1.14.2</testcontainers.version>
     <delombok.output>target/generated-sources/delombok</delombok.output>
   </properties>
 
