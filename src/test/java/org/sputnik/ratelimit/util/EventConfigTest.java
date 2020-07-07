@@ -6,10 +6,10 @@ import java.time.Duration;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.junit.jupiter.api.Test;
 
-public class EventConfigTest {
+class EventConfigTest {
 
   @Test
-  public void testEventConfig() {
+  void testEventConfig() {
     String eventId = RandomStringUtils.randomAlphabetic(10);
     long maxIntents = Long.parseLong(RandomStringUtils.randomNumeric(5));
     Duration minTime = Duration.ofSeconds(Long.parseLong(RandomStringUtils.randomNumeric(6)));

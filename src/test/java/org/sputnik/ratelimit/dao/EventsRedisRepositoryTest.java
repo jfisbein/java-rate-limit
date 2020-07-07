@@ -16,7 +16,7 @@ import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisPool;
 
 @Testcontainers
-public class EventsRedisRepositoryTest {
+class EventsRedisRepositoryTest {
 
   private static final String TEST_KEY = RandomStringUtils.randomAlphanumeric(5);
 
@@ -43,13 +43,13 @@ public class EventsRedisRepositoryTest {
 
 
   @Test
-  public void testAddEvent() {
+  void testAddEvent() {
     eventsRedisRepository.addEvent(TEST_EVENT_ID, TEST_KEY, TEST_TIMEOUT);
     assertEquals(1, redisClient.llen(eventKey(TEST_EVENT_ID, TEST_KEY)).intValue());
   }
 
   @Test
-  public void testAddEventExpiration() throws InterruptedException {
+  void testAddEventExpiration() throws InterruptedException {
     eventsRedisRepository.addEvent(TEST_EVENT_ID, TEST_KEY, Duration.ofMillis(1000));
     assertEquals(1, redisClient.llen(eventKey(TEST_EVENT_ID, TEST_KEY)).intValue());
     TimeUnit.MILLISECONDS.sleep(1200);
@@ -57,7 +57,7 @@ public class EventsRedisRepositoryTest {
   }
 
   @Test
-  public void testRemoveEvent() {
+  void testRemoveEvent() {
     eventsRedisRepository.addEvent(TEST_EVENT_ID, TEST_KEY, TEST_TIMEOUT);
     assertEquals(1, redisClient.llen(eventKey(TEST_EVENT_ID, TEST_KEY)).intValue());
     eventsRedisRepository.remove(TEST_EVENT_ID, TEST_KEY);
@@ -65,7 +65,7 @@ public class EventsRedisRepositoryTest {
   }
 
   @Test
-  public void testGetListLength() {
+  void testGetListLength() {
     eventsRedisRepository.addEvent(TEST_EVENT_ID, TEST_KEY, TEST_TIMEOUT);
     eventsRedisRepository.addEvent(TEST_EVENT_ID, TEST_KEY, TEST_TIMEOUT);
     eventsRedisRepository.addEvent(TEST_EVENT_ID, TEST_KEY, TEST_TIMEOUT);
@@ -73,7 +73,7 @@ public class EventsRedisRepositoryTest {
   }
 
   @Test
-  public void testGetListFirstElement() throws InterruptedException {
+  void testGetListFirstElement() throws InterruptedException {
     eventsRedisRepository.addEvent(TEST_EVENT_ID, TEST_KEY, TEST_TIMEOUT);
     TimeUnit.MILLISECONDS.sleep(100);
     eventsRedisRepository.addEvent(TEST_EVENT_ID, TEST_KEY, TEST_TIMEOUT);
@@ -85,14 +85,14 @@ public class EventsRedisRepositoryTest {
   }
 
   @Test
-  public void testGetListFirstElementWrongFormat() {
+  void testGetListFirstElementWrongFormat() {
     redisClient.rpush(eventKey(TEST_EVENT_ID, TEST_KEY), "A", "B", "C");
     assertEquals(3, eventsRedisRepository.getListLength(TEST_EVENT_ID, TEST_KEY).intValue());
     assertNull(eventsRedisRepository.getListFirstElement(TEST_EVENT_ID, TEST_KEY));
   }
 
   @Test
-  public void testGetListFirstEventElement() throws InterruptedException {
+  void testGetListFirstEventElement() throws InterruptedException {
     eventsRedisRepository.addEvent(TEST_EVENT_ID, TEST_KEY, TEST_TIMEOUT);
     TimeUnit.MILLISECONDS.sleep(100);
     eventsRedisRepository.addEvent(TEST_EVENT_ID, TEST_KEY, TEST_TIMEOUT);
@@ -104,14 +104,14 @@ public class EventsRedisRepositoryTest {
   }
 
   @Test
-  public void testGetListFirstEventElementWrongFormat() {
+  void testGetListFirstEventElementWrongFormat() {
     redisClient.rpush(eventKey(TEST_EVENT_ID, TEST_KEY), "A", "B", "C");
     assertEquals(3, eventsRedisRepository.getListLength(TEST_EVENT_ID, TEST_KEY).intValue());
     assertNull(eventsRedisRepository.getListFirstEventElement(TEST_EVENT_ID, TEST_KEY, 2L));
   }
 
   @Test
-  public void testRemoveListFirstElement() throws InterruptedException {
+  void testRemoveListFirstElement() throws InterruptedException {
     eventsRedisRepository.addEvent(TEST_EVENT_ID, TEST_KEY, TEST_TIMEOUT);
     TimeUnit.MILLISECONDS.sleep(100);
     eventsRedisRepository.addEvent(TEST_EVENT_ID, TEST_KEY, TEST_TIMEOUT);
@@ -124,7 +124,7 @@ public class EventsRedisRepositoryTest {
   }
 
   @Test
-  public void testRemoveListFirstElementWrongFormat() {
+  void testRemoveListFirstElementWrongFormat() {
     redisClient.rpush(eventKey(TEST_EVENT_ID, TEST_KEY), "A", "B", "C");
     assertEquals(3, eventsRedisRepository.getListLength(TEST_EVENT_ID, TEST_KEY).intValue());
     assertNull(eventsRedisRepository.removeListFirstElement(TEST_EVENT_ID, TEST_KEY));

@@ -26,7 +26,7 @@ import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 
 @Testcontainers
-public class RateLimiterTest {
+class RateLimiterTest {
 
   private static final org.slf4j.Logger logger = LoggerFactory.getLogger(RateLimiterTest.class);
 
@@ -45,7 +45,7 @@ public class RateLimiterTest {
     eventsConfig.add(new EventConfig("logMessageTest", 3, Duration.ofSeconds(2)));
 
     vcs = new RateLimiter(JedisConfiguration.builder().port(redis.getMappedPort(6379)).host(redis.getContainerIpAddress()).build(),
-        "hashSecret", eventsConfig.toArray(new EventConfig[0]));
+      "hashSecret", eventsConfig.toArray(new EventConfig[0]));
   }
 
   @AfterAll
@@ -210,9 +210,9 @@ public class RateLimiterTest {
   @Test
   void testDuplicateEventKey() {
     Assertions.assertThrows(DuplicatedEventKeyException.class, () ->
-        new RateLimiter(redis.getContainerIpAddress(), redis.getMappedPort(6379), "secret",
-            new EventConfig("aaa", 3, Duration.ZERO),
-            new EventConfig("aaa", 2, Duration.ofSeconds(5))));
+      new RateLimiter(redis.getContainerIpAddress(), redis.getMappedPort(6379), "secret",
+        new EventConfig("aaa", 3, Duration.ZERO),
+        new EventConfig("aaa", 2, Duration.ofSeconds(5))));
   }
 
   @Test
