@@ -7,10 +7,10 @@ import lombok.Getter;
 @Getter
 public class CanDoResponse {
 
-  private boolean canDo;
-  private long waitMillis;
-  private Reason reason;
-  private long eventsIntents;
+  private final boolean canDo;
+  private final long waitMillis;
+  private final Reason reason;
+  private final long eventsIntents;
 
   public enum Reason {INVALID_REQUEST, TOO_MANY_EVENTS}
 }
