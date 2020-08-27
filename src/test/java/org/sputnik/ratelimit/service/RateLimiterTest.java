@@ -1,22 +1,16 @@
 package org.sputnik.ratelimit.service;
 
 
-import static org.junit.jupiter.api.Assertions.assertEquals;
-import static org.junit.jupiter.api.Assertions.assertFalse;
-import static org.junit.jupiter.api.Assertions.assertNull;
-import static org.junit.jupiter.api.Assertions.assertTrue;
+import static org.assertj.core.api.Assertions.assertThat;
+import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 
-import java.io.IOException;
 import java.time.Duration;
-import java.util.ArrayList;
-import java.util.List;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import org.junit.jupiter.api.AfterAll;
-import org.junit.jupiter.api.Assertions;
 import org.junit.jupiter.api.BeforeAll;
+import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
-import org.slf4j.LoggerFactory;
 import org.sputnik.ratelimit.domain.CanDoResponse;
 import org.sputnik.ratelimit.domain.CanDoResponse.Reason;
 import org.sputnik.ratelimit.exeception.DuplicatedEventKeyException;
@@ -28,8 +22,6 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 @Testcontainers
 class RateLimiterTest {
 
-  private static final org.slf4j.Logger logger = LoggerFactory.getLogger(RateLimiterTest.class);
-
   private static RateLimiter vcs;
 
   @Container
@@ -37,19 +29,19 @@ class RateLimiterTest {
 
   @BeforeAll
   static void init() {
-    List<EventConfig> eventsConfig = new ArrayList<>();
-    eventsConfig.add(new EventConfig("testLogin", 3, Duration.ofSeconds(3600)));
-    eventsConfig.add(new EventConfig("freeTrial", 1, Duration.ofSeconds(600)));
-    eventsConfig.add(new EventConfig("maxLoginAttempts", 3, Duration.ofSeconds(6)));
-    eventsConfig.add(new EventConfig("recurrenceTest", 3, Duration.ofSeconds(10)));
-    eventsConfig.add(new EventConfig("logMessageTest", 3, Duration.ofSeconds(2)));
+    EventConfig[] eventsConfig = new EventConfig[]{
+      new EventConfig("testLogin", 3, Duration.ofSeconds(3600)),
+      new EventConfig("freeTrial", 1, Duration.ofSeconds(600)),
+      new EventConfig("maxLoginAttempts", 3, Duration.ofSeconds(6)),
+      new EventConfig("recurrenceTest", 3, Duration.ofSeconds(10)),
+      new EventConfig("logMessageTest", 3, Duration.ofSeconds(2))
+    };
 
-    vcs = new RateLimiter(JedisConfiguration.builder().port(redis.getMappedPort(6379)).host(redis.getContainerIpAddress()).build(),
-      "hashSecret", eventsConfig.toArray(new EventConfig[0]));
+    vcs = new RateLimiter(redis.getContainerIpAddress(), redis.getMappedPort(6379), "hashSecret", eventsConfig);
   }
 
   @AfterAll
-  static void tearDown() throws IOException {
+  static void tearDown() {
     vcs.close();
   }
 
@@ -59,20 +51,20 @@ class RateLimiterTest {
     String testKey = "my_test_key";
 
     // 0
-    assertTrue(vcs.canDoEvent(testEventId, testKey).getCanDo());
+    assertThat(vcs.canDoEvent(testEventId, testKey).getCanDo()).isTrue();
 
-    assertTrue(vcs.doEvent(testEventId, testKey)); // 1
-    assertTrue(vcs.canDoEvent(testEventId, testKey).getCanDo());
+    assertThat(vcs.doEvent(testEventId, testKey)).isTrue(); // 1
+    assertThat(vcs.canDoEvent(testEventId, testKey).getCanDo()).isTrue();
 
-    assertTrue(vcs.doEvent(testEventId, testKey)); // 2
-    assertTrue(vcs.canDoEvent(testEventId, testKey).getCanDo());
+    assertThat(vcs.doEvent(testEventId, testKey)).isTrue(); // 2
+    assertThat(vcs.canDoEvent(testEventId, testKey).getCanDo()).isTrue();
 
-    assertTrue(vcs.doEvent(testEventId, testKey)); // 3
-    assertFalse(vcs.canDoEvent(testEventId, testKey).getCanDo());
+    assertThat(vcs.doEvent(testEventId, testKey)).isTrue(); // 3
+    assertThat(vcs.canDoEvent(testEventId, testKey).getCanDo()).isFalse();
 
     // Wait for the event attempts to expire
     TimeUnit.MILLISECONDS.sleep(2200);
-    assertTrue(vcs.canDoEvent(testEventId, testKey).getCanDo());
+    assertThat(vcs.canDoEvent(testEventId, testKey).getCanDo()).isTrue();
   }
 
   @Test
@@ -81,154 +73,157 @@ class RateLimiterTest {
     String testKey = "my_test_key_2";
 
     // 0
-    assertTrue(vcs.canDoEvent(testEventId, testKey).getCanDo());
+    assertThat(vcs.canDoEvent(testEventId, testKey).getCanDo()).isTrue();
 
-    assertTrue(vcs.doEvent(testEventId, testKey)); // 1
-    assertTrue(vcs.canDoEvent(testEventId, testKey).getCanDo());
+    assertThat(vcs.doEvent(testEventId, testKey)).isTrue(); // 1
+    assertThat(vcs.canDoEvent(testEventId, testKey).getCanDo()).isTrue();
     TimeUnit.MILLISECONDS.sleep(300);
 
-    assertTrue(vcs.doEvent(testEventId, testKey)); // 2
-    assertTrue(vcs.canDoEvent(testEventId, testKey).getCanDo());
+    assertThat(vcs.doEvent(testEventId, testKey)).isTrue(); // 2
+    assertThat(vcs.canDoEvent(testEventId, testKey).getCanDo()).isTrue();
 
     TimeUnit.MILLISECONDS.sleep(300);
-    assertTrue(vcs.doEvent(testEventId, testKey)); // 3
-    assertFalse(vcs.canDoEvent(testEventId, testKey).getCanDo());
+    assertThat(vcs.doEvent(testEventId, testKey)).isTrue(); // 3
+    assertThat(vcs.canDoEvent(testEventId, testKey).getCanDo()).isFalse();
 
     // Wait for the event attempts to expire
     TimeUnit.MILLISECONDS.sleep(1600);
-    assertTrue(vcs.canDoEvent(testEventId, testKey).getCanDo());
+    assertThat(vcs.canDoEvent(testEventId, testKey).getCanDo()).isTrue();
   }
 
   @Test
+  @DisplayName("CanDoEventTest: no correct eventId and no empty or null key")
   void testCanDoEventNoEventId() {
-    logger.info("CanDoEventTest: no correct eventId and no empty or null key");
-    assertFalse(vcs.canDoEvent("IncorrectLogin", "This is a test").getCanDo());
+    assertThat(vcs.canDoEvent("IncorrectLogin", "This is a test").getCanDo()).isFalse();
   }
 
   @Test
+  @DisplayName("CanDoEventTest: correct eventId and no empty or null key")
   void testCanDoEventCorrectEventId() {
-    logger.info("CanDoEventTest: correct eventId and no empty or null key");
-    assertTrue(vcs.canDoEvent("testLogin", "This is a test").getCanDo());
+    assertThat(vcs.canDoEvent("testLogin", "This is a test").getCanDo()).isTrue();
   }
 
   @Test
+  @DisplayName("CanDoEventTest: no correct eventId and empty key")
   void testCanDoEventNoCorrectEventIdEmptyKey() {
-    logger.info("CanDoEventTest: no correct eventId and empty key");
-    assertFalse(vcs.canDoEvent("IncorrectLogin", "").getCanDo());
+    assertThat(vcs.canDoEvent("IncorrectLogin", "").getCanDo()).isFalse();
   }
 
   @Test
+  @DisplayName("CanDoEventTest: correct eventId and empty key")
   void testCanDoEventCorrectEventIdEmptyKey() {
-    logger.info("CanDoEventTest: correct eventId and empty key");
-    assertFalse(vcs.canDoEvent("testLogin", "").getCanDo());
+    assertThat(vcs.canDoEvent("testLogin", "").getCanDo()).isFalse();
   }
 
   @Test
+  @DisplayName("CanDoEventTest: correct eventId and empty key")
   void testCanDoEventCorrectEventIdNullKey() {
-    logger.info("CanDoEventTest: correct eventId and empty key");
-    assertFalse(vcs.canDoEvent("testLogin", null).getCanDo());
+    assertThat(vcs.canDoEvent("testLogin", null).getCanDo()).isFalse();
   }
 
   @Test
+  @DisplayName("CanDoEventTest: no correct eventId and empty key")
   void testCanDoEventNoCorrectEventIdNullKey() {
-    logger.info("CanDoEventTest: no correct eventId and empty key");
-    assertFalse(vcs.canDoEvent("IncorrectLogin", null).getCanDo());
+    assertThat(vcs.canDoEvent("IncorrectLogin", null).getCanDo()).isFalse();
   }
 
   @Test
+  @DisplayName("DoEventTest: no correct eventId and no empty or null key")
   void testDoEventNoEventId() {
-    logger.info("DoEventTest: no correct eventId and no empty or null key");
-    assertFalse(vcs.doEvent("IncorrectLogin", "This is a test"));
+    assertThat(vcs.doEvent("IncorrectLogin", "This is a test")).isFalse();
   }
 
   @Test
+  @DisplayName("DoEventTest: correct eventId and no empty or null key")
   void testDoEventCorrectEventId() {
-    logger.info("DoEventTest: correct eventId and no empty or null key");
-    assertTrue(vcs.doEvent("testLogin", "This is a test"));
+    assertThat(vcs.doEvent("testLogin", "This is a test")).isTrue();
   }
 
   @Test
+  @DisplayName("DoEventTest: no correct eventId and empty key")
   void testDoEventNoCorrectEventIdEmptyKey() {
-    logger.info("DoEventTest: no correct eventId and empty key");
-    assertFalse(vcs.doEvent("IncorrectLogin", ""));
+    assertThat(vcs.doEvent("IncorrectLogin", "")).isFalse();
   }
 
   @Test
+  @DisplayName("DoEventTest: correct eventId and empty key")
   void testDoEventCorrectEventIdEmptyKey() {
-    logger.info("DoEventTest: correct eventId and empty key");
-    assertFalse(vcs.doEvent("testLogin", ""));
+    assertThat(vcs.doEvent("testLogin", "")).isFalse();
   }
 
   @Test
+  @DisplayName("DoEventTest: correct eventId and empty key")
   void testDoEventCorrectEventIdNullKey() {
-    logger.info("DoEventTest: correct eventId and empty key");
-    assertFalse(vcs.doEvent("testLogin", null));
+    assertThat(vcs.doEvent("testLogin", null)).isFalse();
   }
 
   @Test
+  @DisplayName("DoEventTest: no correct eventId and null key")
   void testDoEventNoCorrectEventIdNullKey() {
-    logger.info("DoEventTest: no correct eventId and empty key");
-    assertFalse(vcs.doEvent("IncorrectLogin", null));
+    assertThat(vcs.doEvent("IncorrectLogin", null)).isFalse();
   }
 
   @Test
+  @DisplayName("Reset: no correct eventId and no empty or null key")
   void testResetNoEventId() {
-    logger.info("Reset: no correct eventId and no empty or null key");
-    assertFalse(vcs.reset("IncorrectLogin", "This is a test"));
+    assertThat(vcs.reset("IncorrectLogin", "This is a test")).isFalse();
   }
 
   @Test
+  @DisplayName("Reset: correct eventId and no empty or null key")
   void testResetCorrectEventId() {
-    logger.info("Reset: correct eventId and no empty or null key");
-    assertTrue(vcs.reset("testLogin", "This is a test"));
+    assertThat(vcs.reset("testLogin", "This is a test")).isTrue();
   }
 
   @Test
+  @DisplayName("Reset: no correct eventId and empty key")
   void testResetNoCorrectEventIdEmptyKey() {
-    logger.info("Reset: no correct eventId and empty key");
-    assertFalse(vcs.reset("IncorrectLogin", ""));
+    assertThat(vcs.reset("IncorrectLogin", "")).isFalse();
   }
 
   @Test
+  @DisplayName("Reset: correct eventId and empty key")
   void testResetCorrectEventIdEmptyKey() {
-    logger.info("Reset: correct eventId and empty key");
-    assertFalse(vcs.reset("testLogin", ""));
+    assertThat(vcs.reset("testLogin", "")).isFalse();
   }
 
   @Test
+  @DisplayName("Reset: correct eventId and empty key")
   void testResetCorrectEventIdNullKey() {
-    logger.info("Reset: correct eventId and empty key");
-    assertFalse(vcs.reset("testLogin", null));
+    assertThat(vcs.reset("testLogin", null)).isFalse();
   }
 
   @Test
+  @DisplayName("Reset: no correct eventId and empty key")
   void testResetNoCorrectEventIdNullKey() {
-    logger.info("Reset: no correct eventId and empty key");
-    assertFalse(vcs.reset("IncorrectLogin", null));
+    assertThat(vcs.reset("IncorrectLogin", null)).isFalse();
   }
 
   @Test
   void testDuplicateEventKey() {
-    Assertions.assertThrows(DuplicatedEventKeyException.class, () ->
-      new RateLimiter(redis.getContainerIpAddress(), redis.getMappedPort(6379), "secret",
-        new EventConfig("aaa", 3, Duration.ZERO),
-        new EventConfig("aaa", 2, Duration.ofSeconds(5))));
+    EventConfig event1 = new EventConfig("aaa", 3, Duration.ZERO);
+    EventConfig event2 = new EventConfig("aaa", 2, Duration.ofSeconds(5));
+    String ipAddress = redis.getContainerIpAddress();
+    Integer port = redis.getMappedPort(6379);
+    assertThatExceptionOfType(DuplicatedEventKeyException.class).isThrownBy(() ->
+      new RateLimiter(ipAddress, port, "secret", event1, event2)
+    );
   }
 
   @Test
   void testWithResponse() {
     CanDoResponse canDoResponse = vcs.canDoEvent("testLogin", "This is a test");
-    assertTrue(canDoResponse.getCanDo());
-    assertNull(canDoResponse.getReason());
-    assertEquals(0, canDoResponse.getWaitMillis());
+    assertThat(canDoResponse.getCanDo()).isTrue();
+    assertThat(canDoResponse.getReason()).isNull();
+    assertThat(canDoResponse.getWaitMillis()).isZero();
   }
 
   @Test
   void testWithResponseReject() {
     CanDoResponse canDoResponse = vcs.canDoEvent("testLogin", "With Response Key");
-    assertTrue(canDoResponse.getCanDo());
-    assertNull(canDoResponse.getReason());
-    assertEquals(0, canDoResponse.getWaitMillis());
+    assertThat(canDoResponse.getCanDo()).isTrue();
+    assertThat(canDoResponse.getReason()).isNull();
+    assertThat(canDoResponse.getWaitMillis()).isZero();
 
     vcs.doEvent("testLogin", "With Response Key");
     vcs.doEvent("testLogin", "With Response Key");
@@ -236,20 +231,20 @@ class RateLimiterTest {
     vcs.doEvent("testLogin", "With Response Key");
 
     canDoResponse = vcs.canDoEvent("testLogin", "With Response Key");
-    assertFalse(canDoResponse.getCanDo());
-    assertEquals(Reason.TOO_MANY_EVENTS, canDoResponse.getReason());
-    assertTrue(canDoResponse.getWaitMillis() > 0);
+    assertThat(canDoResponse.getCanDo()).isFalse();
+    assertThat(canDoResponse.getReason()).isEqualTo(Reason.TOO_MANY_EVENTS);
+    assertThat(canDoResponse.getWaitMillis()).isPositive();
   }
 
   @Test
   void testGetEventConfig() {
     Optional<EventConfig> eventConfig = vcs.getEventConfig("freeTrial");
-    assertTrue(eventConfig.isPresent());
+    assertThat(eventConfig).isPresent();
   }
 
   @Test
   void testGetEventConfigNonExists() {
     Optional<EventConfig> eventConfig = vcs.getEventConfig("non.existing.event");
-    assertFalse(eventConfig.isPresent());
+    assertThat(eventConfig).isNotPresent();
   }
 }
