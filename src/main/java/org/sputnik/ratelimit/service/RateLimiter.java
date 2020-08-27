@@ -1,7 +1,6 @@
 package org.sputnik.ratelimit.service;
 
 import java.io.Closeable;
-import java.io.IOException;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
@@ -29,19 +28,19 @@ public class RateLimiter implements Closeable {
   private final EventsRedisRepository eventsRedisRepository;
   private final String hashingSecret;
   private final Map<String, EventConfig> eventsConfig = new HashMap<>();
-  private JedisPool jedisPool;
+  private final JedisPool jedisPool;
 
   /**
    * Constructor.
    *
-   * @param jedisConf Jedis configuration.
+   * @param jedisConf     Jedis configuration.
    * @param hashingSecret secret for hashing values
-   * @param eventConfigs Events configuration.
+   * @param eventConfigs  Events configuration.
    */
   public RateLimiter(JedisConfiguration jedisConf, String hashingSecret, EventConfig... eventConfigs) {
     this.hashingSecret = hashingSecret;
     jedisPool = new JedisPool(jedisConf.getPoolConfig(), jedisConf.getHost(), jedisConf.getPort(),
-        jedisConf.getTimeout(), jedisConf.getPassword(), jedisConf.getDatabase(), jedisConf.getClientName());
+      jedisConf.getTimeout(), jedisConf.getPassword(), jedisConf.getDatabase(), jedisConf.getClientName());
     eventsRedisRepository = new EventsRedisRepository(jedisPool);
     validateEventsConfig(eventConfigs);
     eventsConfig.putAll(Stream.of(eventConfigs).collect(Collectors.toMap(EventConfig::getEventId, Function.identity())));
@@ -50,22 +49,22 @@ public class RateLimiter implements Closeable {
   /**
    * Constructor.
    *
-   * @param host Redis host.
-   * @param port Redis port.
+   * @param host          Redis host.
+   * @param port          Redis port.
    * @param hashingSecret secret for hashing values
-   * @param eventsConf Events configuration.
+   * @param eventConfigs  Events configuration.
    */
-  public RateLimiter(String host, int port, String hashingSecret, EventConfig... eventsConf) {
-    this(JedisConfiguration.builder().host(host).port(port).build(), hashingSecret, eventsConf);
+  public RateLimiter(String host, int port, String hashingSecret, EventConfig... eventConfigs) {
+    this(JedisConfiguration.builder().host(host).port(port).build(), hashingSecret, eventConfigs);
   }
 
   /**
    * Checks if the event can be done without exceeding the configured limits.
    *
    * @param eventId Event identifier.
-   * @param key event execution key.
-   * @return Response object with information about if the event can be done, the reason, and wait time if it cannot be done because exceeding event
-   * limits.
+   * @param key     event execution key.
+   * @return Response object with information about if the event can be done, the reason, and wait time if it cannot be done because
+   * exceeding event limits.
    */
   public CanDoResponse canDoEvent(String eventId, String key) {
     CanDoResponseBuilder builder = CanDoResponse.builder();
@@ -117,7 +116,7 @@ public class RateLimiter implements Closeable {
    * Indicates that the event has been done.
    *
    * @param eventId Event identifier.
-   * @param key event execution key.
+   * @param key     event execution key.
    * @return <code>true</code> if the event execution has been recorded successfully, <code>false</code> otherwise.
    */
   public boolean doEvent(String eventId, String key) {
@@ -137,7 +136,7 @@ public class RateLimiter implements Closeable {
    * Clear all the event execution for the provided key.
    *
    * @param eventId Event identifier.
-   * @param key event execution key.
+   * @param key     event execution key.
    * @return <code>true</code> if the event execution has been cleared successfully, <code>false</code> otherwise.
    */
   public boolean reset(String eventId, String key) {
@@ -270,7 +269,7 @@ public class RateLimiter implements Closeable {
   }
 
   @Override
-  public void close() throws IOException {
+  public void close() {
     jedisPool.close();
   }
 }

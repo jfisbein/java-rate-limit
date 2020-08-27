@@ -11,17 +11,17 @@ import redis.clients.jedis.Protocol;
 public class JedisConfiguration {
 
   @Default
-  private JedisPoolConfig poolConfig = new JedisPoolConfig();
+  private final JedisPoolConfig poolConfig = new JedisPoolConfig();
   @Default
-  private String host = Protocol.DEFAULT_HOST;
+  private final String host = Protocol.DEFAULT_HOST;
   @Default
-  private int port = Protocol.DEFAULT_PORT;
+  private final int port = Protocol.DEFAULT_PORT;
   @Default
-  private int timeout = Protocol.DEFAULT_TIMEOUT;
+  private final int timeout = Protocol.DEFAULT_TIMEOUT;
   @Default
-  private String password = null;
+  private final String password = null;
   @Default
-  private int database = Protocol.DEFAULT_DATABASE;
+  private final int database = Protocol.DEFAULT_DATABASE;
   @Default
-  private String clientName = "rate-limiter";
+  private final String clientName = "rate-limiter";
 }
