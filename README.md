@@ -25,6 +25,7 @@ class LoginManager {
       // TODO: check credentials and set isValid value
     } else {
       log.warn("User " + username + " blocked due to exceeding number of login attempt, for " + (response.getWaitMillis()/1000) + " seconds");
+      isValid = false;
     }
 		
     if (isValid) {
