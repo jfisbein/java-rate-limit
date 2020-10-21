@@ -46,7 +46,8 @@
     <slf4j.version>1.7.30</slf4j.version>
     <jedis.version>3.3.0</jedis.version>
     <commons-lang.version>3.11</commons-lang.version>
-    <lombok.version>1.18.12</lombok.version>
+    <lombok.version>1.18.16</lombok.version>
+    <lombok-plugin.version>${lombok.version}.0</lombok-plugin.version>
     <testcontainers.version>1.14.3</testcontainers.version>
     <assertj.version>3.17.2</assertj.version>
     <delombok.output>target/generated-sources/delombok</delombok.output>
@@ -269,7 +270,7 @@
           <plugin>
             <groupId>org.projectlombok</groupId>
             <artifactId>lombok-maven-plugin</artifactId>
-            <version>${lombok.version}.0</version>
+            <version>${lombok-plugin.version}</version>
             <configuration>
               <sourceDirectory>${project.basedir}/src/main/java</sourceDirectory>
               <outputDirectory>${delombok.output}</outputDirectory>
