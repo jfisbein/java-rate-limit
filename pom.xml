@@ -48,7 +48,7 @@
     <commons-lang.version>3.12.0</commons-lang.version>
     <lombok.version>1.18.20</lombok.version>
     <lombok-plugin.version>${lombok.version}.0</lombok-plugin.version>
-    <testcontainers.version>1.15.2</testcontainers.version>
+    <testcontainers.version>1.15.3</testcontainers.version>
     <assertj.version>3.19.0</assertj.version>
     <delombok.output>target/generated-sources/delombok</delombok.output>
   </properties>
