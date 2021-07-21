@@ -43,7 +43,7 @@
     <maven.compiler.source>${java.version}</maven.compiler.source>
     <maven.compiler.target>${java.version}</maven.compiler.target>
     <junit.version>5.7.2</junit.version>
-    <slf4j.version>1.7.31</slf4j.version>
+    <slf4j.version>1.7.32</slf4j.version>
     <jedis.version>3.6.3</jedis.version>
     <commons-lang.version>3.12.0</commons-lang.version>
     <lombok.version>1.18.20</lombok.version>
