@@ -47,7 +47,7 @@
     <jedis.version>3.7.1</jedis.version>
     <commons-lang.version>3.12.0</commons-lang.version>
     <lombok.version>1.18.22</lombok.version>
-    <lombok-plugin.version>${lombok.version}.0</lombok-plugin.version>
+    <lombok-plugin.version>1.18.20.0</lombok-plugin.version>
     <testcontainers.version>1.16.2</testcontainers.version>
     <assertj.version>3.21.0</assertj.version>
     <delombok.output>target/generated-sources/delombok</delombok.output>
