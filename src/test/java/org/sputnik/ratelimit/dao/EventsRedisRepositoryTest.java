@@ -1,9 +1,5 @@
 package org.sputnik.ratelimit.dao;
 
-import static org.assertj.core.api.Assertions.assertThat;
-
-import java.time.Duration;
-import java.util.concurrent.TimeUnit;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -13,6 +9,11 @@ import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisPool;
+
+import java.time.Duration;
+import java.util.concurrent.TimeUnit;
+
+import static org.assertj.core.api.Assertions.assertThat;
 
 @Testcontainers
 class EventsRedisRepositoryTest {
@@ -131,7 +132,6 @@ class EventsRedisRepositoryTest {
     assertThat(eventsRedisRepository.removeListFirstElement(TEST_EVENT_ID, TEST_KEY)).isNull();
     assertThat(eventsRedisRepository.getListLength(TEST_EVENT_ID, TEST_KEY)).isEqualTo(2);
   }
-
 
   private String eventKey(String eventId, String key) {
     return eventId + EventsRedisRepository.KEY_SEPARATOR + key;

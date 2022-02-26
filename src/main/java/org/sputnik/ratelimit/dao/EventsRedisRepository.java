@@ -1,11 +1,12 @@
 package org.sputnik.ratelimit.dao;
 
-import java.time.Duration;
-import java.time.Instant;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisPool;
+
+import java.time.Duration;
+import java.time.Instant;
 
 /**
  * Repository to manage Events persistence.
@@ -28,8 +29,8 @@ public class EventsRedisRepository {
   /**
    * Add Event.
    *
-   * @param eventId Event id.
-   * @param key Key.
+   * @param eventId  Event id.
+   * @param key      Key.
    * @param duration Max duration.
    */
   public void addEvent(String eventId, String key, Duration duration) {
@@ -46,11 +47,11 @@ public class EventsRedisRepository {
    * Get number of events for an event id, and a key.
    *
    * @param eventId Event id.
-   * @param key Key.
+   * @param key     Key.
    * @return number of events.
    */
-  public Long getListLength(String eventId, String key) {
-    Long result;
+  public long getListLength(String eventId, String key) {
+    long result;
     try (Jedis jedis = jedisPool.getResource()) {
       result = jedis.llen(eventKey(eventId, key));
     }
@@ -62,7 +63,7 @@ public class EventsRedisRepository {
    * Get first list element date for an event id, and a key.
    *
    * @param eventId Event id.
-   * @param key Key.
+   * @param key     Key.
    * @return First list element.
    */
   public Instant getListFirstElement(String eventId, String key) {
@@ -92,7 +93,7 @@ public class EventsRedisRepository {
    * Remove first list element for an event id, and a key.
    *
    * @param eventId Event id.
-   * @param key Key.
+   * @param key     Key.
    * @return first list element.
    */
   public Instant removeListFirstElement(String eventId, String key) {
@@ -124,7 +125,7 @@ public class EventsRedisRepository {
    * Remove list of events for an event id, and a key.
    *
    * @param eventId Event id.
-   * @param key Key.
+   * @param key     Key.
    */
   public void remove(String eventId, String key) {
     try (Jedis jedis = jedisPool.getResource()) {

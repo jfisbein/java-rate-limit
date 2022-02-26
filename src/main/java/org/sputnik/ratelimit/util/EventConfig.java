@@ -1,12 +1,13 @@
 package org.sputnik.ratelimit.util;
 
-import java.time.Duration;
 import lombok.Value;
+
+import java.time.Duration;
 
 @Value
 public class EventConfig {
 
-  protected final String eventId;
-  protected final long maxIntents;
-  protected final Duration minTime;
+  String eventId;
+  long maxIntents;
+  Duration minTime;
 }
