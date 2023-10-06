@@ -44,11 +44,11 @@
     <maven.compiler.target>${java.version}</maven.compiler.target>
     <slf4j.version>2.0.7</slf4j.version>
     <junit.version>5.9.3</junit.version>
-    <jedis.version>4.3.2</jedis.version>
+    <jedis.version>4.4.3</jedis.version>
     <commons-lang.version>3.12.0</commons-lang.version>
-    <lombok.version>1.18.26</lombok.version>
+    <lombok.version>1.18.28</lombok.version>
     <lombok-plugin.version>1.18.20.0</lombok-plugin.version>
-    <testcontainers.version>1.17.6</testcontainers.version>
+    <testcontainers.version>1.18.3</testcontainers.version>
     <assertj.version>3.24.2</assertj.version>
     <delombok.output>target/generated-sources/delombok</delombok.output>
   </properties>
@@ -170,14 +170,14 @@
       <plugin>
         <groupId>org.apache.maven.plugins</groupId>
         <artifactId>maven-surefire-plugin</artifactId>
-        <version>3.0.0</version>
+        <version>3.1.2</version>
       </plugin>
 
       <!-- Jacoco - For code coverage reports -->
       <plugin>
         <groupId>org.jacoco</groupId>
         <artifactId>jacoco-maven-plugin</artifactId>
-        <version>0.8.8</version>
+        <version>0.8.10</version>
         <executions>
           <execution>
             <id>pre-unit-test</id>
@@ -234,7 +234,7 @@
           <plugin>
             <groupId>org.apache.maven.plugins</groupId>
             <artifactId>maven-source-plugin</artifactId>
-            <version>3.2.1</version>
+            <version>3.3.0</version>
             <executions>
               <execution>
                 <id>attach-sources</id>
@@ -290,7 +290,7 @@
           <plugin>
             <groupId>org.apache.maven.plugins</groupId>
             <artifactId>maven-gpg-plugin</artifactId>
-            <version>3.0.1</version>
+            <version>3.1.0</version>
             <executions>
               <execution>
                 <id>sign-artifacts</id>
