@@ -46,7 +46,7 @@
     <junit.version>5.10.2</junit.version>
     <jedis.version>5.1.1</jedis.version>
     <commons-lang.version>3.14.0</commons-lang.version>
-    <lombok.version>1.18.30</lombok.version>
+    <lombok.version>1.18.32</lombok.version>
     <lombok-plugin.version>1.18.20.0</lombok-plugin.version>
     <testcontainers.version>1.19.6</testcontainers.version>
     <assertj.version>3.25.3</assertj.version>
