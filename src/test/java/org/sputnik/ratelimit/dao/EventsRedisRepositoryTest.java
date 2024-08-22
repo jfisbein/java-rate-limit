@@ -24,7 +24,7 @@ class EventsRedisRepositoryTest {
 
   private static final Duration TEST_TIMEOUT = Duration.ofSeconds(10);
   @Container
-  public static final GenericContainer redis = new GenericContainer("redis:3.0.6").withExposedPorts(6379);
+  public static final GenericContainer redis = new GenericContainer("redis:7.4.0").withExposedPorts(6379);
 
   private static EventsRedisRepository eventsRedisRepository;
   private static Jedis redisClient;
