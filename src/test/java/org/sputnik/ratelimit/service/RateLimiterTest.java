@@ -25,7 +25,7 @@ class RateLimiterTest {
   private static RateLimiter vcs;
 
   @Container
-  private static final GenericContainer redis = new GenericContainer("redis:3.0.6").withExposedPorts(6379);
+  private static final GenericContainer redis = new GenericContainer("redis:7.4.0").withExposedPorts(6379);
 
   @BeforeAll
   static void init() {
