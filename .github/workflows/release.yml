@@ -16,8 +16,8 @@ jobs:
       - name: Install Java and Maven
         uses: actions/setup-java@v4
         with:
-          java-version: 11
-          distribution: 'adopt'
+          java-version: 17
+          distribution: 'temurin'
 
       - name: Release Maven package
         uses: WasiqB/maven-publish-action@v2.7.0

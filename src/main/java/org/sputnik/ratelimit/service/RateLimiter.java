@@ -1,6 +1,8 @@
 package org.sputnik.ratelimit.service;
 
 import java.io.Closeable;
+import java.security.InvalidKeyException;
+import java.security.NoSuchAlgorithmException;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
@@ -12,6 +14,7 @@ import java.util.Set;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
+import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.sputnik.ratelimit.dao.EventsRedisRepository;
 import org.sputnik.ratelimit.domain.CanDoResponse;
@@ -24,11 +27,11 @@ import redis.clients.jedis.JedisPool;
 
 public class RateLimiter implements Closeable {
 
-  private static final org.slf4j.Logger logger = LoggerFactory.getLogger(RateLimiter.class);
+  private static final Logger logger = LoggerFactory.getLogger(RateLimiter.class);
   private final EventsRedisRepository eventsRedisRepository;
-  private final String hashingSecret;
   private final Map<String, EventConfig> eventsConfig = new HashMap<>();
   private final JedisPool jedisPool;
+  private final Hasher hasher;
 
   /**
    * Constructor.
@@ -36,14 +39,17 @@ public class RateLimiter implements Closeable {
    * @param jedisConf     Jedis configuration.
    * @param hashingSecret secret for hashing values
    * @param eventConfigs  Events configuration.
+   * @throws NoSuchAlgorithmException if no Provider supports a MacSpi implementation for the specified algorithm for the Hasher.
+   * @throws InvalidKeyException      if the given key is inappropriate for initializing the Hasher.
    */
-  public RateLimiter(JedisConfiguration jedisConf, String hashingSecret, EventConfig... eventConfigs) {
-    this.hashingSecret = hashingSecret;
+  public RateLimiter(JedisConfiguration jedisConf, String hashingSecret, EventConfig... eventConfigs)
+    throws NoSuchAlgorithmException, InvalidKeyException {
     jedisPool = new JedisPool(jedisConf.getPoolConfig(), jedisConf.getHost(), jedisConf.getPort(),
       jedisConf.getTimeout(), jedisConf.getPassword(), jedisConf.getDatabase(), jedisConf.getClientName());
     eventsRedisRepository = new EventsRedisRepository(jedisPool);
     validateEventsConfig(eventConfigs);
     eventsConfig.putAll(Stream.of(eventConfigs).collect(Collectors.toMap(EventConfig::getEventId, Function.identity())));
+    hasher = new Hasher(hashingSecret);
   }
 
   /**
@@ -53,8 +59,11 @@ public class RateLimiter implements Closeable {
    * @param port          Redis port.
    * @param hashingSecret secret for hashing values
    * @param eventConfigs  Events configuration.
+   * @throws NoSuchAlgorithmException if no Provider supports a MacSpi implementation for the specified algorithm for the Hasher.
+   * @throws InvalidKeyException      if the given key is inappropriate for initializing the Hasher.
    */
-  public RateLimiter(String host, int port, String hashingSecret, EventConfig... eventConfigs) {
+  public RateLimiter(String host, int port, String hashingSecret, EventConfig... eventConfigs)
+    throws NoSuchAlgorithmException, InvalidKeyException {
     this(JedisConfiguration.builder().host(host).port(port).build(), hashingSecret, eventConfigs);
   }
 
@@ -69,15 +78,15 @@ public class RateLimiter implements Closeable {
   public CanDoResponse canDoEvent(String eventId, String key) {
     CanDoResponseBuilder builder = CanDoResponse.builder();
     if (isValidRequest(eventId, key)) {
-      String hashedKey = hashText(key);
       logger.debug("Event ({}) exists, checking if it could be performed", eventId);
 
+      String hashedKey = hashText(key);
       EventConfig eventConfig = eventsConfig.get(eventId);
       Duration eventTime = eventConfig.getMinTime();
-      Long eventMaxIntents = eventConfig.getMaxIntents();
-      Long eventIntents = eventsRedisRepository.getListLength(eventId, hashedKey);
+      long eventMaxIntents = eventConfig.getMaxIntents();
+      long eventIntents = eventsRedisRepository.getListLength(eventId, hashedKey);
 
-      if (eventIntents != null && eventIntents >= eventMaxIntents) {
+      if (eventIntents >= eventMaxIntents) {
         logger.debug("Checking dates");
         builder.eventsIntents(eventIntents);
         Instant firstDate = eventsRedisRepository.getListFirstEventElement(eventId, hashedKey, eventMaxIntents);
@@ -95,7 +104,7 @@ public class RateLimiter implements Closeable {
         }
       } else {
         logger.info("Event [{}] could be performed [{}/{}]", eventId, eventIntents, eventMaxIntents);
-        builder.eventsIntents(eventIntents != null ? eventIntents : 0L);
+        builder.eventsIntents(eventIntents);
         builder.canDo(true);
       }
     } else {
@@ -106,7 +115,8 @@ public class RateLimiter implements Closeable {
     CanDoResponse response = builder.build();
 
     if (!response.getCanDo()) {
-      logger.info("The event: {} could NOT be performed", eventId);
+      logger.info("The event: {} could NOT be performed. reason: {}. need to wait: {} ms",
+        eventId, response.getReason(), response.getWaitMillis());
     }
 
     return response;
@@ -163,7 +173,7 @@ public class RateLimiter implements Closeable {
   /**
    * Hash text using Hasher utility class.
    *
-   * @param text Texto to be hashed.
+   * @param text Text to be hashed.
    * @return Hashed text.
    * @see Hasher
    */
@@ -171,7 +181,7 @@ public class RateLimiter implements Closeable {
     String hash = text;
     try {
       logger.debug("Hashing key");
-      hash = Hasher.convertToHmacSHA256(text, hashingSecret);
+      hash = hasher.convertToHmacSHA256(text);
     } catch (Exception e) {
       logger.warn("Error hashing text, using clear text: {}", e.getMessage());
     }

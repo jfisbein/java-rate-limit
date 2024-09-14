@@ -4,9 +4,11 @@ package org.sputnik.ratelimit.service;
 import static org.assertj.core.api.Assertions.assertThat;
 import static org.assertj.core.api.Assertions.assertThatExceptionOfType;
 
+import com.redis.testcontainers.RedisContainer;
 import java.time.Duration;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
+import lombok.SneakyThrows;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
@@ -15,9 +17,9 @@ import org.sputnik.ratelimit.domain.CanDoResponse;
 import org.sputnik.ratelimit.domain.CanDoResponse.Reason;
 import org.sputnik.ratelimit.exeception.DuplicatedEventKeyException;
 import org.sputnik.ratelimit.util.EventConfig;
-import org.testcontainers.containers.GenericContainer;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
+import org.testcontainers.utility.DockerImageName;
 
 @Testcontainers
 class RateLimiterTest {
@@ -25,9 +27,10 @@ class RateLimiterTest {
   private static RateLimiter vcs;
 
   @Container
-  private static final GenericContainer redis = new GenericContainer("redis:7.4.0").withExposedPorts(6379);
+  private static final RedisContainer redis = new RedisContainer(DockerImageName.parse("redis:7.4.0"));
 
   @BeforeAll
+  @SneakyThrows
   static void init() {
     EventConfig[] eventsConfig = new EventConfig[]{
       new EventConfig("testLogin", 3, Duration.ofSeconds(3600)),
@@ -37,7 +40,7 @@ class RateLimiterTest {
       new EventConfig("logMessageTest", 3, Duration.ofSeconds(2))
     };
 
-    vcs = new RateLimiter(redis.getContainerIpAddress(), redis.getMappedPort(6379), "hashSecret", eventsConfig);
+    vcs = new RateLimiter(redis.getRedisHost(), redis.getRedisPort(), "hashSecret", eventsConfig);
   }
 
   @AfterAll
@@ -203,8 +206,8 @@ class RateLimiterTest {
   void testDuplicateEventKey() {
     EventConfig event1 = new EventConfig("aaa", 3, Duration.ZERO);
     EventConfig event2 = new EventConfig("aaa", 2, Duration.ofSeconds(5));
-    String ipAddress = redis.getContainerIpAddress();
-    Integer port = redis.getMappedPort(6379);
+    String ipAddress = redis.getRedisHost();
+    int port = redis.getRedisPort();
     assertThatExceptionOfType(DuplicatedEventKeyException.class).isThrownBy(() ->
       new RateLimiter(ipAddress, port, "secret", event1, event2)
     );
@@ -225,6 +228,7 @@ class RateLimiterTest {
     assertThat(canDoResponse.getReason()).isNull();
     assertThat(canDoResponse.getWaitMillis()).isZero();
 
+    // Do multiple events to force a reject later
     vcs.doEvent("testLogin", "With Response Key");
     vcs.doEvent("testLogin", "With Response Key");
     vcs.doEvent("testLogin", "With Response Key");
