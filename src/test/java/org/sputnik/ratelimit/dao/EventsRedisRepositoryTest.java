@@ -1,5 +1,9 @@
 package org.sputnik.ratelimit.dao;
 
+import static org.assertj.core.api.Assertions.assertThat;
+
+import java.time.Duration;
+import java.util.concurrent.TimeUnit;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.BeforeEach;
@@ -10,17 +14,12 @@ import org.testcontainers.junit.jupiter.Testcontainers;
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisPool;
 
-import java.time.Duration;
-import java.util.concurrent.TimeUnit;
-
-import static org.assertj.core.api.Assertions.assertThat;
-
 @Testcontainers
 class EventsRedisRepositoryTest {
 
-  private static final String TEST_KEY = RandomStringUtils.randomAlphanumeric(5);
+  private static final String TEST_KEY = RandomStringUtils.insecure().nextAlphanumeric(5);
 
-  private static final String TEST_EVENT_ID = RandomStringUtils.randomAlphanumeric(5);
+  private static final String TEST_EVENT_ID = RandomStringUtils.insecure().nextAlphanumeric(5);
 
   private static final Duration TEST_TIMEOUT = Duration.ofSeconds(10);
   @Container
@@ -31,7 +30,7 @@ class EventsRedisRepositoryTest {
 
   @BeforeAll
   public static void init() {
-    JedisPool jedisPool = new JedisPool(redis.getContainerIpAddress(), redis.getMappedPort(6379));
+    JedisPool jedisPool = new JedisPool(redis.getHost(), redis.getMappedPort(6379));
     redisClient = jedisPool.getResource();
     eventsRedisRepository = new EventsRedisRepository(jedisPool);
   }
