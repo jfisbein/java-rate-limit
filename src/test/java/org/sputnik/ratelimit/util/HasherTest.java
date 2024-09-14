@@ -9,9 +9,9 @@ import org.junit.jupiter.api.Test;
 class HasherTest {
 
   @Test
-  void testPasswordHasher()
-    throws InvalidKeyException, NoSuchAlgorithmException {
-    String hashed = Hasher.convertToHmacSHA256("mi barba tiene 3 pelos", "note lo digo");
+  void testPasswordHasher() throws InvalidKeyException, NoSuchAlgorithmException {
+    Hasher hasher = new Hasher("note lo digo");
+    String hashed = hasher.convertToHmacSHA256("mi barba tiene 3 pelos");
     assertThat(hashed).isEqualTo("IpdSn+krpu8J9lx+6NG9MmCxEP6fjqBpPK25EYTNp+c=");
   }
 }
