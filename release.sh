@@ -10,7 +10,7 @@ fi
 
 #git pull
 ./mvnw versions:set -DnewVersion="${VERSION}" -DgenerateBackupPoms=false
-./mvnw clean deploy --batch-mode
+./mvnw clean test --batch-mode
 git checkout .
 git tag "${VERSION}"
 git push --tags

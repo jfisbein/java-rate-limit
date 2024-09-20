@@ -3,7 +3,7 @@
   xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 http://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
   <artifactId>java-rate-limit</artifactId>
-  <version>1.6.2</version>
+  <version>1.6.5</version>
   <groupId>net.saltando</groupId>
   <name>java-rate-limit</name>
   <description>Java library to help to implement rate limits.</description>
@@ -334,14 +334,14 @@
     </profile>
   </profiles>
 
-  <distributionManagement>
-    <snapshotRepository>
-      <id>ossrh</id>
-      <url>https://oss.sonatype.org/content/repositories/snapshots</url>
-    </snapshotRepository>
-    <repository>
-      <id>ossrh</id>
-      <url>https://oss.sonatype.org/service/local/staging/deploy/maven2</url>
-    </repository>
-  </distributionManagement>
+  <!--  <distributionManagement>-->
+  <!--    <snapshotRepository>-->
+  <!--      <id>ossrh</id>-->
+  <!--      <url>https://oss.sonatype.org/content/repositories/snapshots</url>-->
+  <!--    </snapshotRepository>-->
+  <!--    <repository>-->
+  <!--      <id>ossrh</id>-->
+  <!--      <url>https://oss.sonatype.org/service/local/staging/deploy/maven2</url>-->
+  <!--    </repository>-->
+  <!--  </distributionManagement>-->
 </project>
