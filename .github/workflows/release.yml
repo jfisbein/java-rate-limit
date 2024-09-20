@@ -41,4 +41,4 @@ jobs:
       - name: Publish package
         run: |
           cat ~/.m2/settings.xml
-          mvn --batch-mode -Dgpg.passphrase=${{ secrets.GPG_PASSPHRASE }} -P deploy deploy
+          mvn -X --batch-mode -Dgpg.passphrase=${{ secrets.GPG_PASSPHRASE }} -P deploy deploy
