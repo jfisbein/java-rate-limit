@@ -9,8 +9,8 @@ if [[ -z "${VERSION}" ]]; then
 fi
 
 #git pull
-mvn8 versions:set -DnewVersion="${VERSION}" -DgenerateBackupPoms=false
-mvn8 clean deploy --batch-mode
+./mvnw versions:set -DnewVersion="${VERSION}" -DgenerateBackupPoms=false
+./mvnw clean deploy --batch-mode
 git checkout .
 git tag "${VERSION}"
-git push tags
+git push --tags
