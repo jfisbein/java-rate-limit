@@ -26,8 +26,8 @@ jobs:
             [
               {
                 "id": "central",
-                "username": "${env.SONATYPE_CENTRAL_USERNAME}",
-                "password": "${env.SONATYPE_CENTRAL_PASSWORD}"
+                "username": "${{ secrets.SONATYPE_CENTRAL_USERNAME }}",
+                "password": "${{ secrets.SONATYPE_CENTRAL_PASSWORD }}"
               }
             ]
 
