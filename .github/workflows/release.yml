@@ -18,12 +18,18 @@ jobs:
         with:
           java-version: 17
           distribution: 'temurin'
-
-      - name: Release Maven package
-        uses: WasiqB/maven-publish-action@v2.7.0
+          
+      - name: Create settings.xml file
+        uses: whelk-io/maven-settings-xml-action@v22
         with:
-          maven_args: --batch-mode
-          gpg_private_key: ${{ secrets.gpg_private_key }}
-          gpg_passphrase: ${{ secrets.gpg_passphrase }}
-          server_username: ${{ secrets.nexus_username }}
-          server_password: ${{ secrets.nexus_password }}
+          servers: >
+            [
+              {
+                "id": "central",
+                "username": "${env.SONATYPE_CENTRAL_USERNAME}",
+                "password": "${env.SONATYPE_CENTRAL_PASSWORD}"
+              }
+            ]
+
+      - name: Publish package
+        run: mvn --batch-mode -P deploy deploy
