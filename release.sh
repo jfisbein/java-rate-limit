@@ -9,8 +9,11 @@ if [[ -z "${VERSION}" ]]; then
 fi
 
 #git pull
-./mvnw versions:set -DnewVersion="${VERSION}" -DgenerateBackupPoms=false
 ./mvnw clean test --batch-mode
-git checkout .
+
+./mvnw versions:set -DnewVersion="${VERSION}" -DgenerateBackupPoms=false
+git add pom.xml
+git commit -m "Set version ${VERSION}"
+git push
 git tag "${VERSION}"
 git push --tags
