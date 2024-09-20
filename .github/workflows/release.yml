@@ -39,6 +39,4 @@ jobs:
           gpg --list-secret-keys --keyid-format LONG
 
       - name: Publish package
-        run: |
-          cat ~/.m2/settings.xml
-          mvn -X --batch-mode -Dgpg.passphrase=${{ secrets.GPG_PASSPHRASE }} -P deploy deploy
+        run: mvn --batch-mode -Dgpg.passphrase=${{ secrets.GPG_PASSPHRASE }} -P deploy deploy
