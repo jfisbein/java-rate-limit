@@ -50,7 +50,7 @@
     <lombok-plugin.version>1.18.20.0</lombok-plugin.version>
     <testcontainers.version>1.20.3</testcontainers.version>
     <testcontainers-redis.version>2.2.2</testcontainers-redis.version>
-    <assertj.version>3.26.3</assertj.version>
+    <assertj.version>3.27.2</assertj.version>
     <delombok.output>target/generated-sources/delombok</delombok.output>
   </properties>
 
