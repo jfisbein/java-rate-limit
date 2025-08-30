@@ -44,7 +44,7 @@
     <maven.compiler.target>${java.version}</maven.compiler.target>
     <slf4j.version>2.0.17</slf4j.version>
     <junit.version>5.13.4</junit.version>
-    <jedis.version>6.1.0</jedis.version>
+    <jedis.version>6.2.0</jedis.version>
     <commons-lang.version>3.18.0</commons-lang.version>
     <lombok.version>1.18.38</lombok.version>
     <lombok-plugin.version>1.18.20.0</lombok-plugin.version>
