@@ -46,7 +46,7 @@
     <junit.version>5.13.4</junit.version>
     <jedis.version>6.2.0</jedis.version>
     <commons-lang.version>3.18.0</commons-lang.version>
-    <lombok.version>1.18.38</lombok.version>
+    <lombok.version>1.18.40</lombok.version>
     <lombok-plugin.version>1.18.20.0</lombok-plugin.version>
     <testcontainers.version>1.21.3</testcontainers.version>
     <testcontainers-redis.version>2.2.4</testcontainers-redis.version>
