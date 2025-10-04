@@ -9,6 +9,7 @@ import java.time.Duration;
 import java.util.Optional;
 import java.util.concurrent.TimeUnit;
 import lombok.SneakyThrows;
+import lombok.extern.slf4j.Slf4j;
 import org.junit.jupiter.api.AfterAll;
 import org.junit.jupiter.api.BeforeAll;
 import org.junit.jupiter.api.DisplayName;
@@ -21,6 +22,7 @@ import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;
 import org.testcontainers.utility.DockerImageName;
 
+@Slf4j
 @Testcontainers
 class RateLimiterTest {
 
@@ -37,7 +39,8 @@ class RateLimiterTest {
       new EventConfig("freeTrial", 1, Duration.ofSeconds(600)),
       new EventConfig("maxLoginAttempts", 3, Duration.ofSeconds(6)),
       new EventConfig("recurrenceTest", 3, Duration.ofSeconds(10)),
-      new EventConfig("logMessageTest", 3, Duration.ofSeconds(2))
+      new EventConfig("logMessageTest", 3, Duration.ofSeconds(2)),
+      new EventConfig("longRecurrenceTest", 1000, Duration.ofSeconds(1))
     };
 
     vcs = new RateLimiter(redis.getRedisHost(), redis.getRedisPort(), "hashSecret", eventsConfig);
@@ -250,5 +253,33 @@ class RateLimiterTest {
   void testGetEventConfigNonExists() {
     Optional<EventConfig> eventConfig = vcs.getEventConfig("non.existing.event");
     assertThat(eventConfig).isNotPresent();
+  }
+
+  @Test
+  void pseudoPerformanceTest() {
+    String testEventId = "longRecurrenceTest";
+    String testKey = "my_test_key_performance";
+
+    int totalEvents = 10_000;
+    int canDoCount = 0;
+
+    long startTime = System.currentTimeMillis();
+
+    for (int i = 0; i < totalEvents; i++) {
+      if (vcs.canDoEvent(testEventId, testKey).getCanDo()) {
+        vcs.doEvent(testEventId, testKey);
+        canDoCount++;
+      }
+    }
+
+    long endTime = System.currentTimeMillis();
+    long duration = endTime - startTime;
+
+    log.info("Total events processed: {}", totalEvents);
+    log.info("Events allowed: {}", canDoCount);
+    log.info("Total time taken (ms): {}", duration);
+    log.info("Average time per event (ms): {}", (double) duration / totalEvents);
+
+    assertThat(duration).isLessThan(5000); // Ensure the test runs within a reasonable time
   }
 }
