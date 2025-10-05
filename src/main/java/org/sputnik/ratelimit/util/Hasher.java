@@ -11,17 +11,14 @@ import javax.crypto.spec.SecretKeySpec;
 
 public class Hasher {
 
-  private final Mac mac;
+  private final byte[] secretBytes;
+
 
   /**
    * @param secret secret to use
-   * @throws NoSuchAlgorithmException if no Provider supports a MacSpi implementation for the specified algorithm.
-   * @throws InvalidKeyException      if the given key is inappropriate for initializing this MAC.
    */
-  public Hasher(String secret) throws NoSuchAlgorithmException, InvalidKeyException {
-    SecretKey key = new SecretKeySpec(secret.getBytes(StandardCharsets.UTF_8), "HmacSHA256");
-    mac = Mac.getInstance(key.getAlgorithm());
-    mac.init(key);
+  public Hasher(String secret) {
+    secretBytes = secret.getBytes(StandardCharsets.UTF_8);
   }
 
   /**
@@ -32,9 +29,22 @@ public class Hasher {
    */
   public String convertToHmacSHA256(String text) {
     // Encode the text into bytes using UTF-8 and digest it
-    byte[] digest = mac.doFinal(text.getBytes(StandardCharsets.UTF_8));
+    byte[] digest = newMacInstance().doFinal(text.getBytes(StandardCharsets.UTF_8));
 
     // convert the digest into a string
     return Base64.getEncoder().encodeToString(digest);
+  }
+
+  private Mac newMacInstance() {
+    Mac newMac;
+    try {
+      SecretKey key = new SecretKeySpec(secretBytes, "HmacSHA256");
+      newMac = Mac.getInstance(key.getAlgorithm());
+      newMac.init(key);
+    } catch (NoSuchAlgorithmException | InvalidKeyException e) {
+      throw new IllegalStateException(e);
+    }
+
+    return newMac;
   }
 }
