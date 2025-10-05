@@ -57,20 +57,20 @@ class RateLimiterTest {
     String testKey = "my_test_key";
 
     // 0
-    assertThat(vcs.canDoEvent(testEventId, testKey).getCanDo()).isTrue();
+    assertThat(vcs.canDoEvent(testEventId, testKey).canDo()).isTrue();
 
     assertThat(vcs.doEvent(testEventId, testKey)).isTrue(); // 1
-    assertThat(vcs.canDoEvent(testEventId, testKey).getCanDo()).isTrue();
+    assertThat(vcs.canDoEvent(testEventId, testKey).canDo()).isTrue();
 
     assertThat(vcs.doEvent(testEventId, testKey)).isTrue(); // 2
-    assertThat(vcs.canDoEvent(testEventId, testKey).getCanDo()).isTrue();
+    assertThat(vcs.canDoEvent(testEventId, testKey).canDo()).isTrue();
 
     assertThat(vcs.doEvent(testEventId, testKey)).isTrue(); // 3
-    assertThat(vcs.canDoEvent(testEventId, testKey).getCanDo()).isFalse();
+    assertThat(vcs.canDoEvent(testEventId, testKey).canDo()).isFalse();
 
     // Wait for the event attempts to expire
     TimeUnit.MILLISECONDS.sleep(2200);
-    assertThat(vcs.canDoEvent(testEventId, testKey).getCanDo()).isTrue();
+    assertThat(vcs.canDoEvent(testEventId, testKey).canDo()).isTrue();
   }
 
   @Test
@@ -79,58 +79,58 @@ class RateLimiterTest {
     String testKey = "my_test_key_2";
 
     // 0
-    assertThat(vcs.canDoEvent(testEventId, testKey).getCanDo()).isTrue();
+    assertThat(vcs.canDoEvent(testEventId, testKey).canDo()).isTrue();
 
     assertThat(vcs.doEvent(testEventId, testKey)).isTrue(); // 1
-    assertThat(vcs.canDoEvent(testEventId, testKey).getCanDo()).isTrue();
+    assertThat(vcs.canDoEvent(testEventId, testKey).canDo()).isTrue();
     TimeUnit.MILLISECONDS.sleep(300);
 
     assertThat(vcs.doEvent(testEventId, testKey)).isTrue(); // 2
-    assertThat(vcs.canDoEvent(testEventId, testKey).getCanDo()).isTrue();
+    assertThat(vcs.canDoEvent(testEventId, testKey).canDo()).isTrue();
 
     TimeUnit.MILLISECONDS.sleep(300);
     assertThat(vcs.doEvent(testEventId, testKey)).isTrue(); // 3
-    assertThat(vcs.canDoEvent(testEventId, testKey).getCanDo()).isFalse();
+    assertThat(vcs.canDoEvent(testEventId, testKey).canDo()).isFalse();
 
     // Wait for the event attempts to expire
     TimeUnit.MILLISECONDS.sleep(1600);
-    assertThat(vcs.canDoEvent(testEventId, testKey).getCanDo()).isTrue();
+    assertThat(vcs.canDoEvent(testEventId, testKey).canDo()).isTrue();
   }
 
   @Test
   @DisplayName("CanDoEventTest: no correct eventId and no empty or null key")
   void testCanDoEventNoEventId() {
-    assertThat(vcs.canDoEvent("IncorrectLogin", "This is a test").getCanDo()).isFalse();
+    assertThat(vcs.canDoEvent("IncorrectLogin", "This is a test").canDo()).isFalse();
   }
 
   @Test
   @DisplayName("CanDoEventTest: correct eventId and no empty or null key")
   void testCanDoEventCorrectEventId() {
-    assertThat(vcs.canDoEvent("testLogin", "This is a test").getCanDo()).isTrue();
+    assertThat(vcs.canDoEvent("testLogin", "This is a test").canDo()).isTrue();
   }
 
   @Test
   @DisplayName("CanDoEventTest: no correct eventId and empty key")
   void testCanDoEventNoCorrectEventIdEmptyKey() {
-    assertThat(vcs.canDoEvent("IncorrectLogin", "").getCanDo()).isFalse();
+    assertThat(vcs.canDoEvent("IncorrectLogin", "").canDo()).isFalse();
   }
 
   @Test
   @DisplayName("CanDoEventTest: correct eventId and empty key")
   void testCanDoEventCorrectEventIdEmptyKey() {
-    assertThat(vcs.canDoEvent("testLogin", "").getCanDo()).isFalse();
+    assertThat(vcs.canDoEvent("testLogin", "").canDo()).isFalse();
   }
 
   @Test
   @DisplayName("CanDoEventTest: correct eventId and empty key")
   void testCanDoEventCorrectEventIdNullKey() {
-    assertThat(vcs.canDoEvent("testLogin", null).getCanDo()).isFalse();
+    assertThat(vcs.canDoEvent("testLogin", null).canDo()).isFalse();
   }
 
   @Test
   @DisplayName("CanDoEventTest: no correct eventId and empty key")
   void testCanDoEventNoCorrectEventIdNullKey() {
-    assertThat(vcs.canDoEvent("IncorrectLogin", null).getCanDo()).isFalse();
+    assertThat(vcs.canDoEvent("IncorrectLogin", null).canDo()).isFalse();
   }
 
   @Test
@@ -219,17 +219,17 @@ class RateLimiterTest {
   @Test
   void testWithResponse() {
     CanDoResponse canDoResponse = vcs.canDoEvent("testLogin", "This is a test");
-    assertThat(canDoResponse.getCanDo()).isTrue();
-    assertThat(canDoResponse.getReason()).isNull();
-    assertThat(canDoResponse.getWaitMillis()).isZero();
+    assertThat(canDoResponse.canDo()).isTrue();
+    assertThat(canDoResponse.reason()).isNull();
+    assertThat(canDoResponse.waitMillis()).isZero();
   }
 
   @Test
   void testWithResponseReject() {
     CanDoResponse canDoResponse = vcs.canDoEvent("testLogin", "With Response Key");
-    assertThat(canDoResponse.getCanDo()).isTrue();
-    assertThat(canDoResponse.getReason()).isNull();
-    assertThat(canDoResponse.getWaitMillis()).isZero();
+    assertThat(canDoResponse.canDo()).isTrue();
+    assertThat(canDoResponse.reason()).isNull();
+    assertThat(canDoResponse.waitMillis()).isZero();
 
     // Do multiple events to force a reject later
     vcs.doEvent("testLogin", "With Response Key");
@@ -238,9 +238,9 @@ class RateLimiterTest {
     vcs.doEvent("testLogin", "With Response Key");
 
     canDoResponse = vcs.canDoEvent("testLogin", "With Response Key");
-    assertThat(canDoResponse.getCanDo()).isFalse();
-    assertThat(canDoResponse.getReason()).isEqualTo(Reason.TOO_MANY_EVENTS);
-    assertThat(canDoResponse.getWaitMillis()).isPositive();
+    assertThat(canDoResponse.canDo()).isFalse();
+    assertThat(canDoResponse.reason()).isEqualTo(Reason.TOO_MANY_EVENTS);
+    assertThat(canDoResponse.waitMillis()).isPositive();
   }
 
   @Test
@@ -266,7 +266,7 @@ class RateLimiterTest {
     long startTime = System.currentTimeMillis();
 
     for (int i = 0; i < totalEvents; i++) {
-      if (vcs.canDoEvent(testEventId, testKey).getCanDo()) {
+      if (vcs.canDoEvent(testEventId, testKey).canDo()) {
         vcs.doEvent(testEventId, testKey);
         canDoCount++;
       }

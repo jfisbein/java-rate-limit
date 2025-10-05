@@ -18,8 +18,6 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.sputnik.ratelimit.dao.EventsRedisRepository;
 import org.sputnik.ratelimit.domain.CanDoResponse;
-import org.sputnik.ratelimit.domain.CanDoResponse.CanDoResponseBuilder;
-import org.sputnik.ratelimit.domain.CanDoResponse.Reason;
 import org.sputnik.ratelimit.exeception.DuplicatedEventKeyException;
 import org.sputnik.ratelimit.util.EventConfig;
 import org.sputnik.ratelimit.util.Hasher;
@@ -78,7 +76,7 @@ public class RateLimiter implements Closeable {
    * exceeding event limits.
    */
   public CanDoResponse canDoEvent(String eventId, String key) {
-    CanDoResponseBuilder builder = CanDoResponse.builder();
+    CanDoResponse response;
     if (isValidRequest(eventId, key)) {
       logger.debug("Event ({}) exists, checking if it could be performed", eventId);
 
@@ -90,35 +88,27 @@ public class RateLimiter implements Closeable {
 
       if (eventIntents >= eventMaxIntents) {
         logger.debug("Checking dates");
-        builder.eventsIntents(eventIntents);
         Instant firstDate = eventsRedisRepository.getListFirstEventElement(eventId, hashedKey, eventMaxIntents);
-
         long millisDifference = ChronoUnit.MILLIS.between(firstDate, Instant.now());
 
         if (millisDifference > eventTime.toMillis()) {
           eventsRedisRepository.removeListFirstElement(eventId, hashedKey);
           logger.info("Event [{}] could be performed [{}/{}]", eventId, eventIntents, eventMaxIntents);
-          builder.canDo(true);
+          response = CanDoResponse.success(eventIntents);
         } else {
-          builder.reason(Reason.TOO_MANY_EVENTS);
-          builder.waitMillis(eventTime.toMillis() - millisDifference);
-          builder.canDo(false);
+          response = CanDoResponse.tooMany(eventTime.toMillis() - millisDifference, eventIntents);
         }
       } else {
         logger.info("Event [{}] could be performed [{}/{}]", eventId, eventIntents, eventMaxIntents);
-        builder.eventsIntents(eventIntents);
-        builder.canDo(true);
+        response = CanDoResponse.success(eventIntents);
       }
     } else {
-      builder.reason(Reason.INVALID_REQUEST);
-      builder.canDo(false);
+      response = CanDoResponse.invalidRequest();
     }
 
-    CanDoResponse response = builder.build();
-
-    if (!response.getCanDo()) {
+    if (!response.canDo()) {
       logger.info("The event: {} could NOT be performed. reason: {}. need to wait: {} ms",
-        eventId, response.getReason(), response.getWaitMillis());
+        eventId, response.reason(), response.waitMillis());
     }
 
     return response;
