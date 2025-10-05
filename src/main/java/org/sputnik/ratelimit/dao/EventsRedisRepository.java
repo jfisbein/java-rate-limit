@@ -1,12 +1,12 @@
 package org.sputnik.ratelimit.dao;
 
+import java.time.Duration;
+import java.time.Instant;
+import java.util.Objects;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisPool;
-
-import java.time.Duration;
-import java.time.Instant;
 
 /**
  * Repository to manage Events persistence.
@@ -23,7 +23,7 @@ public class EventsRedisRepository {
    * @param jedisPool Jedis Pool.
    */
   public EventsRedisRepository(JedisPool jedisPool) {
-    this.jedisPool = jedisPool;
+    this.jedisPool = Objects.requireNonNull(jedisPool, "jedisPool must not be null");
   }
 
   /**
@@ -35,10 +35,10 @@ public class EventsRedisRepository {
    */
   public void addEvent(String eventId, String key, Duration duration) {
     try (Jedis jedis = jedisPool.getResource()) {
-
-      jedis.rpush(eventKey(eventId, key), Long.toString(System.currentTimeMillis()));
+      String redisKey = eventKey(eventId, key);
+      jedis.rpush(redisKey, Long.toString(System.currentTimeMillis()));
       if (duration != null) {
-        jedis.expire(eventKey(eventId, key), (int) duration.getSeconds());
+        jedis.expire(redisKey, (int) duration.getSeconds());
       }
     }
   }
