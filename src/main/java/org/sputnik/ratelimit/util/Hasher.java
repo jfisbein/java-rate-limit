@@ -1,6 +1,7 @@
 package org.sputnik.ratelimit.util;
 
-import java.nio.charset.StandardCharsets;
+import static java.nio.charset.StandardCharsets.UTF_8;
+
 import java.security.InvalidKeyException;
 import java.security.NoSuchAlgorithmException;
 import java.util.Base64;
@@ -11,14 +12,13 @@ import javax.crypto.spec.SecretKeySpec;
 
 public class Hasher {
 
-  private final byte[] secretBytes;
-
+  private final SecretKey key;
 
   /**
    * @param secret secret to use
    */
   public Hasher(String secret) {
-    secretBytes = secret.getBytes(StandardCharsets.UTF_8);
+    key = new SecretKeySpec(secret.getBytes(UTF_8), "HmacSHA256");
   }
 
   /**
@@ -29,7 +29,7 @@ public class Hasher {
    */
   public String convertToHmacSHA256(String text) {
     // Encode the text into bytes using UTF-8 and digest it
-    byte[] digest = newMacInstance().doFinal(text.getBytes(StandardCharsets.UTF_8));
+    byte[] digest = newMacInstance().doFinal(text.getBytes(UTF_8));
 
     // convert the digest into a string
     return Base64.getEncoder().encodeToString(digest);
@@ -38,7 +38,6 @@ public class Hasher {
   private Mac newMacInstance() {
     Mac newMac;
     try {
-      SecretKey key = new SecretKeySpec(secretBytes, "HmacSHA256");
       newMac = Mac.getInstance(key.getAlgorithm());
       newMac.init(key);
     } catch (NoSuchAlgorithmException | InvalidKeyException e) {
