@@ -3,6 +3,7 @@ package org.sputnik.ratelimit.service;
 import lombok.Builder;
 import lombok.Builder.Default;
 import lombok.Getter;
+import redis.clients.jedis.JedisPool;
 import redis.clients.jedis.JedisPoolConfig;
 import redis.clients.jedis.Protocol;
 
@@ -24,4 +25,8 @@ public class JedisConfiguration {
   private final int database = Protocol.DEFAULT_DATABASE;
   @Default
   private final String clientName = "rate-limiter";
+
+  public JedisPool createPool() {
+    return new JedisPool(poolConfig, host, port, timeout, password, database, clientName);
+  }
 }

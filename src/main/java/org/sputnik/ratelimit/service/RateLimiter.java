@@ -42,10 +42,8 @@ public class RateLimiter implements Closeable {
    * @throws NoSuchAlgorithmException if no Provider supports a MacSpi implementation for the specified algorithm for the Hasher.
    * @throws InvalidKeyException      if the given key is inappropriate for initializing the Hasher.
    */
-  public RateLimiter(JedisConfiguration jedisConf, String hashingSecret, EventConfig... eventConfigs)
-    throws NoSuchAlgorithmException, InvalidKeyException {
-    jedisPool = new JedisPool(jedisConf.getPoolConfig(), jedisConf.getHost(), jedisConf.getPort(),
-      jedisConf.getTimeout(), jedisConf.getPassword(), jedisConf.getDatabase(), jedisConf.getClientName());
+  public RateLimiter(JedisConfiguration jedisConf, String hashingSecret, EventConfig... eventConfigs) {
+    jedisPool = jedisConf.createPool();
     eventsRedisRepository = new EventsRedisRepository(jedisPool);
     validateEventsConfig(eventConfigs);
     eventsConfig = Stream.of(eventConfigs).collect(Collectors.toMap(EventConfig::eventId, Function.identity()));
