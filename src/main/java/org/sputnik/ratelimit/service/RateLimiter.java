@@ -29,7 +29,7 @@ public class RateLimiter implements Closeable {
 
   private static final Logger logger = LoggerFactory.getLogger(RateLimiter.class);
   private final EventsRedisRepository eventsRedisRepository;
-  private final Map<String, EventConfig> eventsConfig = new HashMap<>();
+  private final Map<String, EventConfig> eventsConfig;
   private final JedisPool jedisPool;
   private final Hasher hasher;
 
@@ -48,7 +48,7 @@ public class RateLimiter implements Closeable {
       jedisConf.getTimeout(), jedisConf.getPassword(), jedisConf.getDatabase(), jedisConf.getClientName());
     eventsRedisRepository = new EventsRedisRepository(jedisPool);
     validateEventsConfig(eventConfigs);
-    eventsConfig.putAll(Stream.of(eventConfigs).collect(Collectors.toMap(EventConfig::getEventId, Function.identity())));
+    eventsConfig = Stream.of(eventConfigs).collect(Collectors.toMap(EventConfig::getEventId, Function.identity()));
     hasher = new Hasher(hashingSecret);
   }
 
