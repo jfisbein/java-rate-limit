@@ -207,7 +207,7 @@ class RateLimiterTest {
 
   @Test
   void testDuplicateEventKey() {
-    EventConfig event1 = new EventConfig("aaa", 3, Duration.ZERO);
+    EventConfig event1 = new EventConfig("aaa", 3, Duration.ofSeconds(1));
     EventConfig event2 = new EventConfig("aaa", 2, Duration.ofSeconds(5));
     String ipAddress = redis.getRedisHost();
     int port = redis.getRedisPort();

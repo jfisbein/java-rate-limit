@@ -48,7 +48,7 @@ public class RateLimiter implements Closeable {
       jedisConf.getTimeout(), jedisConf.getPassword(), jedisConf.getDatabase(), jedisConf.getClientName());
     eventsRedisRepository = new EventsRedisRepository(jedisPool);
     validateEventsConfig(eventConfigs);
-    eventsConfig = Stream.of(eventConfigs).collect(Collectors.toMap(EventConfig::getEventId, Function.identity()));
+    eventsConfig = Stream.of(eventConfigs).collect(Collectors.toMap(EventConfig::eventId, Function.identity()));
     hasher = new Hasher(hashingSecret);
   }
 
