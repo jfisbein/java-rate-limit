@@ -1,8 +1,6 @@
 package org.sputnik.ratelimit.service;
 
 import java.io.Closeable;
-import java.security.InvalidKeyException;
-import java.security.NoSuchAlgorithmException;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
@@ -39,8 +37,6 @@ public class RateLimiter implements Closeable {
    * @param jedisConf     Jedis configuration.
    * @param hashingSecret secret for hashing values
    * @param eventConfigs  Events configuration.
-   * @throws NoSuchAlgorithmException if no Provider supports a MacSpi implementation for the specified algorithm for the Hasher.
-   * @throws InvalidKeyException      if the given key is inappropriate for initializing the Hasher.
    */
   public RateLimiter(JedisConfiguration jedisConf, String hashingSecret, EventConfig... eventConfigs) {
     jedisPool = jedisConf.createPool();
@@ -57,11 +53,8 @@ public class RateLimiter implements Closeable {
    * @param port          Redis port.
    * @param hashingSecret secret for hashing values
    * @param eventConfigs  Events configuration.
-   * @throws NoSuchAlgorithmException if no Provider supports a MacSpi implementation for the specified algorithm for the Hasher.
-   * @throws InvalidKeyException      if the given key is inappropriate for initializing the Hasher.
    */
-  public RateLimiter(String host, int port, String hashingSecret, EventConfig... eventConfigs)
-    throws NoSuchAlgorithmException, InvalidKeyException {
+  public RateLimiter(String host, int port, String hashingSecret, EventConfig... eventConfigs) {
     this(JedisConfiguration.builder().host(host).port(port).build(), hashingSecret, eventConfigs);
   }
 
@@ -80,8 +73,8 @@ public class RateLimiter implements Closeable {
 
       String hashedKey = hashText(key);
       EventConfig eventConfig = eventsConfig.get(eventId);
-      Duration eventTime = eventConfig.getMinTime();
-      long eventMaxIntents = eventConfig.getMaxIntents();
+      Duration eventTime = eventConfig.minTime();
+      long eventMaxIntents = eventConfig.maxIntents();
       long eventIntents = eventsRedisRepository.getListLength(eventId, hashedKey);
 
       if (eventIntents >= eventMaxIntents) {
@@ -124,8 +117,8 @@ public class RateLimiter implements Closeable {
     if (isValidRequest(eventId, key)) {
       EventConfig eventConfig = eventsConfig.get(eventId);
 
-      eventsRedisRepository.addEvent(eventId, hashText(key), eventConfig.getMinTime());
-      logger.info("Event [{}] recorded", eventId);
+      eventsRedisRepository.addEvent(eventId, hashText(key), eventConfig.minTime());
+      logger.debug("Event [{}] recorded", eventId);
       eventRecorded = true;
     }
 
@@ -143,7 +136,7 @@ public class RateLimiter implements Closeable {
     boolean eventDeleted = false;
     if (isValidRequest(eventId, key)) {
       eventsRedisRepository.remove(eventId, hashText(key));
-      logger.info("Event [{}] deleted", eventId);
+      logger.debug("Event [{}] deleted", eventId);
       eventDeleted = true;
     }
 
@@ -206,11 +199,10 @@ public class RateLimiter implements Closeable {
   private void validateEventsConfig(EventConfig... eventConfigs) {
     Set<String> keys = new HashSet<>();
     for (EventConfig cfg : eventConfigs) {
-      String eventId = cfg.getEventId();
-      if (keys.contains(eventId)) {
+      String eventId = cfg.eventId();
+      if (!keys.add(eventId)) {
         throw new DuplicatedEventKeyException(eventId);
       }
-      keys.add(eventId);
     }
   }
 
