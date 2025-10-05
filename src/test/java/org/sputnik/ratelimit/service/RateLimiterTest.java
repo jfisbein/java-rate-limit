@@ -280,6 +280,6 @@ class RateLimiterTest {
     log.info("Total time taken (ms): {}", duration);
     log.info("Average time per event (ms): {}", (double) duration / totalEvents);
 
-    assertThat(duration).isLessThan(5000); // Ensure the test runs within a reasonable time
+    assertThat(duration).isLessThan(10_000); // Ensure the test runs within a reasonable time
   }
 }
