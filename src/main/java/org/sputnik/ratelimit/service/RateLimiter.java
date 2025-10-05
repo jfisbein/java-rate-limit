@@ -6,11 +6,11 @@ import java.security.NoSuchAlgorithmException;
 import java.time.Duration;
 import java.time.Instant;
 import java.time.temporal.ChronoUnit;
-import java.util.HashMap;
 import java.util.HashSet;
 import java.util.Map;
 import java.util.Optional;
 import java.util.Set;
+import java.util.concurrent.ConcurrentHashMap;
 import java.util.function.Function;
 import java.util.stream.Collectors;
 import java.util.stream.Stream;
@@ -32,6 +32,8 @@ public class RateLimiter implements Closeable {
   private final Map<String, EventConfig> eventsConfig;
   private final JedisPool jedisPool;
   private final Hasher hasher;
+  private final Map<String, String> hashCache = new ConcurrentHashMap<>();
+
 
   /**
    * Constructor.
@@ -178,15 +180,14 @@ public class RateLimiter implements Closeable {
    * @see Hasher
    */
   private String hashText(String text) {
-    String hash = text;
-    try {
-      logger.debug("Hashing key");
-      hash = hasher.convertToHmacSHA256(text);
-    } catch (Exception e) {
-      logger.warn("Error hashing text, using clear text: {}", e.getMessage());
-    }
-
-    return hash;
+    return hashCache.computeIfAbsent(text, s -> {
+      try {
+        return hasher.convertToHmacSHA256(s);
+      } catch (Exception e) {
+        logger.warn("Error hashing text, using clear text: {}", e.getMessage());
+        return s;
+      }
+    });
   }
 
   /**
