@@ -44,11 +44,11 @@
     <maven.compiler.target>${java.version}</maven.compiler.target>
     <slf4j.version>2.0.17</slf4j.version>
     <junit.version>6.0.1</junit.version>
-    <jedis.version>7.0.0</jedis.version>
+    <jedis.version>7.1.0</jedis.version>
     <commons-lang.version>3.20.0</commons-lang.version>
     <lombok.version>1.18.42</lombok.version>
     <lombok-plugin.version>1.18.20.0</lombok-plugin.version>
-    <testcontainers.version>1.21.3</testcontainers.version>
+    <testcontainers.version>2.0.2</testcontainers.version>
     <testcontainers-redis.version>2.2.4</testcontainers-redis.version>
     <assertj.version>3.27.6</assertj.version>
     <delombok.output>target/generated-sources/delombok</delombok.output>
@@ -64,6 +64,14 @@
         <groupId>org.junit</groupId>
         <artifactId>junit-bom</artifactId>
         <version>${junit.version}</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+
+      <dependency>
+        <groupId>org.testcontainers</groupId>
+        <artifactId>testcontainers-bom</artifactId>
+        <version>${testcontainers.version}</version>
         <type>pom</type>
         <scope>import</scope>
       </dependency>
@@ -107,7 +115,6 @@
     <dependency>
       <groupId>org.testcontainers</groupId>
       <artifactId>testcontainers</artifactId>
-      <version>${testcontainers.version}</version>
       <scope>test</scope>
     </dependency>
 
@@ -118,7 +125,6 @@
       <scope>test</scope>
     </dependency>
 
-
     <dependency>
       <groupId>org.slf4j</groupId>
       <artifactId>slf4j-simple</artifactId>
@@ -128,8 +134,7 @@
 
     <dependency>
       <groupId>org.testcontainers</groupId>
-      <artifactId>junit-jupiter</artifactId>
-      <version>${testcontainers.version}</version>
+      <artifactId>testcontainers-junit-jupiter</artifactId>
       <scope>test</scope>
     </dependency>
 
