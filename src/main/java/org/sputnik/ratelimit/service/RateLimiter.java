@@ -4,7 +4,7 @@ import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.sputnik.ratelimit.dao.EventsRedisRepository;
 import org.sputnik.ratelimit.domain.CanDoResponse;
-import org.sputnik.ratelimit.exeception.DuplicatedEventKeyException;
+import org.sputnik.ratelimit.exception.DuplicatedEventKeyException;
 import org.sputnik.ratelimit.util.EventConfig;
 import org.sputnik.ratelimit.util.Hasher;
 import redis.clients.jedis.JedisPool;
@@ -80,24 +80,24 @@ public class RateLimiter implements Closeable {
             String hashedKey = hashText(key);
             EventConfig eventConfig = eventsConfig.get(eventId);
             Duration eventTime = eventConfig.minTime();
-            long eventMaxIntents = eventConfig.maxIntents();
+            long eventMaxAttempts = eventConfig.maxAttempts();
             Instant now = Instant.now();
             eventsRedisRepository.removeEventsOlderThan(eventId, hashedKey, now.minus(eventTime));
-            long eventIntents = eventsRedisRepository.getEventsCount(eventId, hashedKey);
+            long eventAttempts = eventsRedisRepository.getEventsCount(eventId, hashedKey);
 
-            if (eventIntents >= eventMaxIntents) {
+            if (eventAttempts >= eventMaxAttempts) {
                 logger.debug("Checking dates");
                 Instant firstDate = eventsRedisRepository.getOldestEvent(eventId, hashedKey);
                 if (firstDate == null) {
-                    logger.info("Event [{}] could be performed [{}/{}]", eventId, eventIntents, eventMaxIntents);
-                    response = CanDoResponse.success(eventIntents);
+                    logger.info("Event [{}] could be performed [{}/{}]", eventId, eventAttempts, eventMaxAttempts);
+                    response = CanDoResponse.success(eventAttempts);
                 } else {
                     long millisDifference = ChronoUnit.MILLIS.between(firstDate, now);
-                    response = CanDoResponse.tooMany(Math.max(0, eventTime.toMillis() - millisDifference), eventIntents);
+                    response = CanDoResponse.tooMany(Math.max(0, eventTime.toMillis() - millisDifference), eventAttempts);
                 }
             } else {
-                logger.info("Event [{}] could be performed [{}/{}]", eventId, eventIntents, eventMaxIntents);
-                response = CanDoResponse.success(eventIntents);
+                logger.info("Event [{}] could be performed [{}/{}]", eventId, eventAttempts, eventMaxAttempts);
+                response = CanDoResponse.success(eventAttempts);
             }
         } else {
             response = CanDoResponse.invalidRequest();
