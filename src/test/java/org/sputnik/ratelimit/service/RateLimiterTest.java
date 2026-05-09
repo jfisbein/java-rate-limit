@@ -16,7 +16,7 @@ import org.junit.jupiter.api.DisplayName;
 import org.junit.jupiter.api.Test;
 import org.sputnik.ratelimit.domain.CanDoResponse;
 import org.sputnik.ratelimit.domain.CanDoResponse.Reason;
-import org.sputnik.ratelimit.exeception.DuplicatedEventKeyException;
+import org.sputnik.ratelimit.exception.DuplicatedEventKeyException;
 import org.sputnik.ratelimit.util.EventConfig;
 import org.testcontainers.junit.jupiter.Container;
 import org.testcontainers.junit.jupiter.Testcontainers;

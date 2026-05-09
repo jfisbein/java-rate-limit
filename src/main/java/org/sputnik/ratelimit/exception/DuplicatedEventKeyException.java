@@ -1,4 +1,4 @@
-package org.sputnik.ratelimit.exeception;
+package org.sputnik.ratelimit.exception;
 
 public class DuplicatedEventKeyException extends RuntimeException {
 
