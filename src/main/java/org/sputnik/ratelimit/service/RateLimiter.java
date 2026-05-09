@@ -1,17 +1,5 @@
 package org.sputnik.ratelimit.service;
 
-import java.io.Closeable;
-import java.time.Duration;
-import java.time.Instant;
-import java.time.temporal.ChronoUnit;
-import java.util.HashSet;
-import java.util.Map;
-import java.util.Optional;
-import java.util.Set;
-import java.util.concurrent.ConcurrentHashMap;
-import java.util.function.Function;
-import java.util.stream.Collectors;
-import java.util.stream.Stream;
 import org.slf4j.Logger;
 import org.slf4j.LoggerFactory;
 import org.sputnik.ratelimit.dao.EventsRedisRepository;
@@ -21,246 +9,271 @@ import org.sputnik.ratelimit.util.EventConfig;
 import org.sputnik.ratelimit.util.Hasher;
 import redis.clients.jedis.JedisPool;
 
+import java.io.Closeable;
+import java.time.Duration;
+import java.time.Instant;
+import java.time.temporal.ChronoUnit;
+import java.util.*;
+import java.util.function.Function;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
+
 public class RateLimiter implements Closeable {
 
-  private static final Logger logger = LoggerFactory.getLogger(RateLimiter.class);
-  private final EventsRedisRepository eventsRedisRepository;
-  private final Map<String, EventConfig> eventsConfig;
-  private final JedisPool jedisPool;
-  private final Hasher hasher;
-  private final Map<String, String> hashCache = new ConcurrentHashMap<>();
-
-
-  /**
-   * Constructor.
-   *
-   * @param jedisConf     Jedis configuration.
-   * @param hashingSecret secret for hashing values
-   * @param eventConfigs  Events configuration.
-   */
-  public RateLimiter(JedisConfiguration jedisConf, String hashingSecret, EventConfig... eventConfigs) {
-    jedisPool = jedisConf.createPool();
-    eventsRedisRepository = new EventsRedisRepository(jedisPool);
-    validateEventsConfig(eventConfigs);
-    eventsConfig = Stream.of(eventConfigs).collect(Collectors.toMap(EventConfig::eventId, Function.identity()));
-    hasher = new Hasher(hashingSecret);
-  }
-
-  /**
-   * Constructor.
-   *
-   * @param host          Redis host.
-   * @param port          Redis port.
-   * @param hashingSecret secret for hashing values
-   * @param eventConfigs  Events configuration.
-   */
-  public RateLimiter(String host, int port, String hashingSecret, EventConfig... eventConfigs) {
-    this(JedisConfiguration.builder().host(host).port(port).build(), hashingSecret, eventConfigs);
-  }
-
-  /**
-   * Checks if the event can be done without exceeding the configured limits.
-   *
-   * @param eventId Event identifier.
-   * @param key     event execution key.
-   * @return Response object with information about if the event can be done, the reason, and wait time if it cannot be done because
-   * exceeding event limits.
-   */
-  public CanDoResponse canDoEvent(String eventId, String key) {
-    CanDoResponse response;
-    if (isValidRequest(eventId, key)) {
-      logger.debug("Event ({}) exists, checking if it could be performed", eventId);
-
-      String hashedKey = hashText(key);
-      EventConfig eventConfig = eventsConfig.get(eventId);
-      Duration eventTime = eventConfig.minTime();
-      long eventMaxIntents = eventConfig.maxIntents();
-      Instant now = Instant.now();
-      eventsRedisRepository.removeEventsOlderThan(eventId, hashedKey, now.minus(eventTime));
-      long eventIntents = eventsRedisRepository.getEventsCount(eventId, hashedKey);
-
-      if (eventIntents >= eventMaxIntents) {
-        logger.debug("Checking dates");
-        Instant firstDate = eventsRedisRepository.getOldestEvent(eventId, hashedKey);
-        if (firstDate == null) {
-          logger.info("Event [{}] could be performed [{}/{}]", eventId, eventIntents, eventMaxIntents);
-          response = CanDoResponse.success(eventIntents);
-        } else {
-          long millisDifference = ChronoUnit.MILLIS.between(firstDate, now);
-          response = CanDoResponse.tooMany(Math.max(0, eventTime.toMillis() - millisDifference), eventIntents);
+    private static final Logger logger = LoggerFactory.getLogger(RateLimiter.class);
+    /**
+     * Maximum number of plain-text key -> hashed-key entries kept in memory.
+     */
+    private static final int MAX_HASHED_KEY_CACHE_ENTRIES = 10_000;
+    private final EventsRedisRepository eventsRedisRepository;
+    private final Map<String, EventConfig> eventsConfig;
+    private final JedisPool jedisPool;
+    private final Hasher hasher;
+    private final Map<String, String> hashCache = new LinkedHashMap<>(16, 0.75f, true) {
+        @Override
+        protected boolean removeEldestEntry(Map.Entry<String, String> eldest) {
+            return size() > MAX_HASHED_KEY_CACHE_ENTRIES;
         }
-      } else {
-        logger.info("Event [{}] could be performed [{}/{}]", eventId, eventIntents, eventMaxIntents);
-        response = CanDoResponse.success(eventIntents);
-      }
-    } else {
-      response = CanDoResponse.invalidRequest();
+    };
+
+
+    /**
+     * Constructor.
+     *
+     * @param jedisConf     Jedis configuration.
+     * @param hashingSecret secret for hashing values
+     * @param eventConfigs  Events configuration.
+     */
+    public RateLimiter(JedisConfiguration jedisConf, String hashingSecret, EventConfig... eventConfigs) {
+        jedisPool = jedisConf.createPool();
+        eventsRedisRepository = new EventsRedisRepository(jedisPool);
+        validateEventsConfig(eventConfigs);
+        eventsConfig = Stream.of(eventConfigs).collect(Collectors.toMap(EventConfig::eventId, Function.identity()));
+        hasher = new Hasher(hashingSecret);
     }
 
-    if (!response.canDo()) {
-      logger.info("The event: {} could NOT be performed. reason: {}. need to wait: {} ms",
-        eventId, response.reason(), response.waitMillis());
+    /**
+     * Constructor.
+     *
+     * @param host          Redis host.
+     * @param port          Redis port.
+     * @param hashingSecret secret for hashing values
+     * @param eventConfigs  Events configuration.
+     */
+    public RateLimiter(String host, int port, String hashingSecret, EventConfig... eventConfigs) {
+        this(JedisConfiguration.builder().host(host).port(port).build(), hashingSecret, eventConfigs);
     }
 
-    return response;
-  }
+    /**
+     * Checks if the event can be done without exceeding the configured limits.
+     *
+     * @param eventId Event identifier.
+     * @param key     event execution key.
+     * @return Response object with information about if the event can be done, the reason, and wait time if it cannot be done because
+     * exceeding event limits.
+     */
+    public CanDoResponse canDoEvent(String eventId, String key) {
+        CanDoResponse response;
+        if (isValidRequest(eventId, key)) {
+            logger.debug("Event ({}) exists, checking if it could be performed", eventId);
 
-  /**
-   * Indicates that the event has been done.
-   *
-   * @param eventId Event identifier.
-   * @param key     event execution key.
-   * @return <code>true</code> if the event execution has been recorded successfully, <code>false</code> otherwise.
-   */
-  public boolean doEvent(String eventId, String key) {
-    boolean eventRecorded = false;
-    if (isValidRequest(eventId, key)) {
-      EventConfig eventConfig = eventsConfig.get(eventId);
+            String hashedKey = hashText(key);
+            EventConfig eventConfig = eventsConfig.get(eventId);
+            Duration eventTime = eventConfig.minTime();
+            long eventMaxIntents = eventConfig.maxIntents();
+            Instant now = Instant.now();
+            eventsRedisRepository.removeEventsOlderThan(eventId, hashedKey, now.minus(eventTime));
+            long eventIntents = eventsRedisRepository.getEventsCount(eventId, hashedKey);
 
-      eventsRedisRepository.addEvent(eventId, hashText(key), eventConfig.minTime());
-      logger.debug("Event [{}] recorded", eventId);
-      eventRecorded = true;
+            if (eventIntents >= eventMaxIntents) {
+                logger.debug("Checking dates");
+                Instant firstDate = eventsRedisRepository.getOldestEvent(eventId, hashedKey);
+                if (firstDate == null) {
+                    logger.info("Event [{}] could be performed [{}/{}]", eventId, eventIntents, eventMaxIntents);
+                    response = CanDoResponse.success(eventIntents);
+                } else {
+                    long millisDifference = ChronoUnit.MILLIS.between(firstDate, now);
+                    response = CanDoResponse.tooMany(Math.max(0, eventTime.toMillis() - millisDifference), eventIntents);
+                }
+            } else {
+                logger.info("Event [{}] could be performed [{}/{}]", eventId, eventIntents, eventMaxIntents);
+                response = CanDoResponse.success(eventIntents);
+            }
+        } else {
+            response = CanDoResponse.invalidRequest();
+        }
+
+        if (!response.canDo()) {
+            logger.info("The event: {} could NOT be performed. reason: {}. need to wait: {} ms",
+                    eventId, response.reason(), response.waitMillis());
+        }
+
+        return response;
     }
 
-    return eventRecorded;
-  }
+    /**
+     * Indicates that the event has been done.
+     *
+     * @param eventId Event identifier.
+     * @param key     event execution key.
+     * @return <code>true</code> if the event execution has been recorded successfully, <code>false</code> otherwise.
+     */
+    public boolean doEvent(String eventId, String key) {
+        boolean eventRecorded = false;
+        if (isValidRequest(eventId, key)) {
+            EventConfig eventConfig = eventsConfig.get(eventId);
 
-  /**
-   * Clear all the event execution for the provided key.
-   *
-   * @param eventId Event identifier.
-   * @param key     event execution key.
-   * @return <code>true</code> if the event execution has been cleared successfully, <code>false</code> otherwise.
-   */
-  public boolean reset(String eventId, String key) {
-    boolean eventDeleted = false;
-    if (isValidRequest(eventId, key)) {
-      eventsRedisRepository.remove(eventId, hashText(key));
-      logger.debug("Event [{}] deleted", eventId);
-      eventDeleted = true;
+            eventsRedisRepository.addEvent(eventId, hashText(key), eventConfig.minTime());
+            logger.debug("Event [{}] recorded", eventId);
+            eventRecorded = true;
+        }
+
+        return eventRecorded;
     }
 
-    return eventDeleted;
-  }
+    /**
+     * Clear all the event execution for the provided key.
+     *
+     * @param eventId Event identifier.
+     * @param key     event execution key.
+     * @return <code>true</code> if the event execution has been cleared successfully, <code>false</code> otherwise.
+     */
+    public boolean reset(String eventId, String key) {
+        boolean eventDeleted = false;
+        if (isValidRequest(eventId, key)) {
+            eventsRedisRepository.remove(eventId, hashText(key));
+            logger.debug("Event [{}] deleted", eventId);
+            eventDeleted = true;
+        }
 
-  /**
-   * Get information about an event.
-   *
-   * @param eventId Event identifier.
-   * @return Event configuration.
-   */
-  public Optional<EventConfig> getEventConfig(String eventId) {
-    return Optional.ofNullable(eventsConfig.get(eventId));
-  }
-
-  /**
-   * Hash text using Hasher utility class.
-   *
-   * @param text Text to be hashed.
-   * @return Hashed text.
-   * @see Hasher
-   */
-  private String hashText(String text) {
-    return hashCache.computeIfAbsent(text, s -> {
-      try {
-        return hasher.convertToHmacSHA256(s);
-      } catch (Exception e) {
-        logger.warn("Error hashing text, using clear text: {}", e.getMessage());
-        return s;
-      }
-    });
-  }
-
-  /**
-   * Validates the request. Checks if the key is not blank, and the eventId is configured.
-   */
-  private boolean isValidRequest(String eventId, String key) {
-    boolean valid = false;
-    if (isNotBlank(key)) {
-      logger.debug("Checking the existence of event: {}", eventId);
-      if (eventsConfig.containsKey(eventId)) {
-        valid = true;
-      } else {
-        logger.warn("Invalid request - The eventId [{}] is not found", eventId);
-      }
-    } else {
-      logger.warn("Invalid request - The key is blank");
+        return eventDeleted;
     }
 
-    return valid;
-  }
-
-  /**
-   * Validates no key are duplicated in the events config supplied.
-   *
-   * @param eventConfigs List of event configs to validate.
-   * @throws DuplicatedEventKeyException when a key is duplicated.
-   */
-  private void validateEventsConfig(EventConfig... eventConfigs) {
-    Set<String> keys = new HashSet<>();
-    for (EventConfig cfg : eventConfigs) {
-      String eventId = cfg.eventId();
-      if (!keys.add(eventId)) {
-        throw new DuplicatedEventKeyException(eventId);
-      }
+    /**
+     * Get information about an event.
+     *
+     * @param eventId Event identifier.
+     * @return Event configuration.
+     */
+    public Optional<EventConfig> getEventConfig(String eventId) {
+        return Optional.ofNullable(eventsConfig.get(eventId));
     }
-  }
 
-  /**
-   * <p>Checks if a CharSequence is empty (""), null or whitespace only.</p>
-   *
-   * <p>Whitespace is defined by {@link Character#isWhitespace(char)}.</p>
-   *
-   * <p><strong>Copied from Apache Commons StringUtils</strong></p>
-   *
-   * <pre>
-   * isBlank(null)      = true
-   * isBlank("")        = true
-   * isBlank(" ")       = true
-   * isBlank("bob")     = false
-   * isBlank("  bob  ") = false
-   * </pre>
-   *
-   * @param cs the CharSequence to check, may be null
-   * @return {@code true} if the CharSequence is null, empty or whitespace only
-   */
-  private boolean isBlank(CharSequence cs) {
-    int strLen;
-    if (cs == null || (strLen = cs.length()) == 0) {
-      return true;
+    /**
+     * Hash text using Hasher utility class.
+     *
+     * @param text Text to be hashed.
+     * @return Hashed text.
+     * @see Hasher
+     */
+    private String hashText(String text) {
+        synchronized (hashCache) {
+            String cachedValue = hashCache.get(text);
+            if (cachedValue != null) {
+                return cachedValue;
+            }
+
+            try {
+                String hashed = hasher.convertToHmacSHA256(text);
+                hashCache.put(text, hashed);
+                return hashed;
+            } catch (Exception e) {
+                logger.warn("Error hashing text, using clear text: {}", e.getMessage());
+                return text;
+            }
+        }
     }
-    for (int i = 0; i < strLen; i++) {
-      if (!Character.isWhitespace(cs.charAt(i))) {
-        return false;
-      }
+
+    /**
+     * Validates the request. Checks if the key is not blank, and the eventId is configured.
+     */
+    private boolean isValidRequest(String eventId, String key) {
+        boolean valid = false;
+        if (isNotBlank(key)) {
+            logger.debug("Checking the existence of event: {}", eventId);
+            if (eventsConfig.containsKey(eventId)) {
+                valid = true;
+            } else {
+                logger.warn("Invalid request - The eventId [{}] is not found", eventId);
+            }
+        } else {
+            logger.warn("Invalid request - The key is blank");
+        }
+
+        return valid;
     }
-    return true;
-  }
 
-  /**
-   * <p>Checks if a CharSequence is not empty (""), not null and not whitespace only.</p>
-   *
-   * <p>Whitespace is defined by {@link Character#isWhitespace(char)}.</p>
-   *
-   * <p><strong>Copied from Apache Commons StringUtils</strong></p>
-   *
-   * <pre>
-   * isNotBlank(null)      = false
-   * isNotBlank("")        = false
-   * isNotBlank(" ")       = false
-   * isNotBlank("bob")     = true
-   * isNotBlank("  bob  ") = true
-   * </pre>
-   *
-   * @param cs the CharSequence to check, may be null
-   * @return {@code true} if the CharSequence is not empty and not null and not whitespace only
-   */
-  private boolean isNotBlank(CharSequence cs) {
-    return !isBlank(cs);
-  }
+    /**
+     * Validates no key are duplicated in the events config supplied.
+     *
+     * @param eventConfigs List of event configs to validate.
+     * @throws DuplicatedEventKeyException when a key is duplicated.
+     */
+    private void validateEventsConfig(EventConfig... eventConfigs) {
+        Set<String> keys = new HashSet<>();
+        for (EventConfig cfg : eventConfigs) {
+            String eventId = cfg.eventId();
+            if (!keys.add(eventId)) {
+                throw new DuplicatedEventKeyException(eventId);
+            }
+        }
+    }
 
-  @Override
-  public void close() {
-    jedisPool.close();
-  }
+    /**
+     * <p>Checks if a CharSequence is empty (""), null or whitespace only.</p>
+     *
+     * <p>Whitespace is defined by {@link Character#isWhitespace(char)}.</p>
+     *
+     * <p><strong>Copied from Apache Commons StringUtils</strong></p>
+     *
+     * <pre>
+     * isBlank(null)      = true
+     * isBlank("")        = true
+     * isBlank(" ")       = true
+     * isBlank("bob")     = false
+     * isBlank("  bob  ") = false
+     * </pre>
+     *
+     * @param cs the CharSequence to check, may be null
+     * @return {@code true} if the CharSequence is null, empty or whitespace only
+     */
+    private boolean isBlank(CharSequence cs) {
+        int strLen;
+        if (cs == null || (strLen = cs.length()) == 0) {
+            return true;
+        }
+        for (int i = 0; i < strLen; i++) {
+            if (!Character.isWhitespace(cs.charAt(i))) {
+                return false;
+            }
+        }
+        return true;
+    }
+
+    /**
+     * <p>Checks if a CharSequence is not empty (""), not null and not whitespace only.</p>
+     *
+     * <p>Whitespace is defined by {@link Character#isWhitespace(char)}.</p>
+     *
+     * <p><strong>Copied from Apache Commons StringUtils</strong></p>
+     *
+     * <pre>
+     * isNotBlank(null)      = false
+     * isNotBlank("")        = false
+     * isNotBlank(" ")       = false
+     * isNotBlank("bob")     = true
+     * isNotBlank("  bob  ") = true
+     * </pre>
+     *
+     * @param cs the CharSequence to check, may be null
+     * @return {@code true} if the CharSequence is not empty and not null and not whitespace only
+     */
+    private boolean isNotBlank(CharSequence cs) {
+        return !isBlank(cs);
+    }
+
+    @Override
+    public void close() {
+        jedisPool.close();
+    }
 }
