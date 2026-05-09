@@ -68,15 +68,15 @@ public class EventsRedisRepository {
    * @return First event date or null if no events are found.
    */
   public Instant getOldestEvent(String eventId, String key) {
-    Instant result = null;
     try (Jedis jedis = jedisPool.getResource()) {
-      for (Tuple tuple : jedis.zrangeWithScores(eventKey(eventId, key), 0, 0)) {
-        result = Instant.ofEpochMilli((long) tuple.getScore());
-        break;
+      var iterator = jedis.zrangeWithScores(eventKey(eventId, key), 0, 0).iterator();
+      if (iterator.hasNext()) {
+        Tuple tuple = iterator.next();
+        return Instant.ofEpochMilli((long) tuple.getScore());
       }
     }
 
-    return result;
+    return null;
   }
 
   /**
