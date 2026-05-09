@@ -4,6 +4,7 @@ import static org.assertj.core.api.Assertions.assertThat;
 
 import com.redis.testcontainers.RedisContainer;
 import java.time.Duration;
+import java.time.Instant;
 import java.util.concurrent.TimeUnit;
 import org.apache.commons.lang3.RandomStringUtils;
 import org.junit.jupiter.api.BeforeAll;
@@ -45,92 +46,75 @@ class EventsRedisRepositoryTest {
   @Test
   void testAddEvent() {
     eventsRedisRepository.addEvent(TEST_EVENT_ID, TEST_KEY, TEST_TIMEOUT);
-    assertThat(redisClient.llen(eventKey(TEST_EVENT_ID, TEST_KEY))).isOne();
+    assertThat(redisClient.zcard(eventKey(TEST_EVENT_ID, TEST_KEY))).isOne();
   }
 
   @Test
   void testAddEventExpiration() throws InterruptedException {
     eventsRedisRepository.addEvent(TEST_EVENT_ID, TEST_KEY, Duration.ofMillis(1000));
-    assertThat(redisClient.llen(eventKey(TEST_EVENT_ID, TEST_KEY))).isOne();
+    assertThat(redisClient.zcard(eventKey(TEST_EVENT_ID, TEST_KEY))).isOne();
     TimeUnit.MILLISECONDS.sleep(1200);
-    assertThat(redisClient.llen(eventKey(TEST_EVENT_ID, TEST_KEY))).isZero();
+    assertThat(redisClient.zcard(eventKey(TEST_EVENT_ID, TEST_KEY))).isZero();
   }
 
   @Test
   void testRemoveEvent() {
     eventsRedisRepository.addEvent(TEST_EVENT_ID, TEST_KEY, TEST_TIMEOUT);
-    assertThat(redisClient.llen(eventKey(TEST_EVENT_ID, TEST_KEY))).isOne();
+    assertThat(redisClient.zcard(eventKey(TEST_EVENT_ID, TEST_KEY))).isOne();
     eventsRedisRepository.remove(TEST_EVENT_ID, TEST_KEY);
-    assertThat(redisClient.llen(eventKey(TEST_EVENT_ID, TEST_KEY))).isZero();
+    assertThat(redisClient.zcard(eventKey(TEST_EVENT_ID, TEST_KEY))).isZero();
   }
 
   @Test
-  void testGetListLength() {
+  void testGetEventsCount() {
     eventsRedisRepository.addEvent(TEST_EVENT_ID, TEST_KEY, TEST_TIMEOUT);
     eventsRedisRepository.addEvent(TEST_EVENT_ID, TEST_KEY, TEST_TIMEOUT);
     eventsRedisRepository.addEvent(TEST_EVENT_ID, TEST_KEY, TEST_TIMEOUT);
-    assertThat(eventsRedisRepository.getListLength(TEST_EVENT_ID, TEST_KEY)).isEqualTo(3);
+    assertThat(eventsRedisRepository.getEventsCount(TEST_EVENT_ID, TEST_KEY)).isEqualTo(3);
   }
 
   @Test
-  void testGetListFirstElement() throws InterruptedException {
+  void testGetOldestEvent() throws InterruptedException {
     eventsRedisRepository.addEvent(TEST_EVENT_ID, TEST_KEY, TEST_TIMEOUT);
     TimeUnit.MILLISECONDS.sleep(100);
     eventsRedisRepository.addEvent(TEST_EVENT_ID, TEST_KEY, TEST_TIMEOUT);
     TimeUnit.MILLISECONDS.sleep(100);
     eventsRedisRepository.addEvent(TEST_EVENT_ID, TEST_KEY, TEST_TIMEOUT);
-    assertThat(eventsRedisRepository.getListLength(TEST_EVENT_ID, TEST_KEY)).isEqualTo(3);
-    String firstElement = redisClient.lindex(eventKey(TEST_EVENT_ID, TEST_KEY), 0);
-    assertThat(eventsRedisRepository.getListFirstElement(TEST_EVENT_ID, TEST_KEY).toEpochMilli()).isEqualTo(Long.parseLong(firstElement));
+    assertThat(eventsRedisRepository.getEventsCount(TEST_EVENT_ID, TEST_KEY)).isEqualTo(3);
+    Double firstScore = redisClient.zscore(eventKey(TEST_EVENT_ID, TEST_KEY), redisClient.zrange(eventKey(TEST_EVENT_ID, TEST_KEY), 0, 0).iterator().next());
+    assertThat(eventsRedisRepository.getOldestEvent(TEST_EVENT_ID, TEST_KEY).toEpochMilli()).isEqualTo(firstScore.longValue());
   }
 
   @Test
-  void testGetListFirstElementWrongFormat() {
-    redisClient.rpush(eventKey(TEST_EVENT_ID, TEST_KEY), "A", "B", "C");
-    assertThat(eventsRedisRepository.getListLength(TEST_EVENT_ID, TEST_KEY)).isEqualTo(3);
-    assertThat(eventsRedisRepository.getListFirstElement(TEST_EVENT_ID, TEST_KEY)).isNull();
+  void testGetOldestEventEmpty() {
+    assertThat(eventsRedisRepository.getOldestEvent(TEST_EVENT_ID, TEST_KEY)).isNull();
   }
 
   @Test
-  void testGetListFirstEventElement() throws InterruptedException {
-    eventsRedisRepository.addEvent(TEST_EVENT_ID, TEST_KEY, TEST_TIMEOUT);
-    TimeUnit.MILLISECONDS.sleep(100);
-    eventsRedisRepository.addEvent(TEST_EVENT_ID, TEST_KEY, TEST_TIMEOUT);
-    TimeUnit.MILLISECONDS.sleep(100);
-    eventsRedisRepository.addEvent(TEST_EVENT_ID, TEST_KEY, TEST_TIMEOUT);
-    assertThat(eventsRedisRepository.getListLength(TEST_EVENT_ID, TEST_KEY)).isEqualTo(3);
-    String firstElement = redisClient.lindex(eventKey(TEST_EVENT_ID, TEST_KEY), 1);
-    assertThat(eventsRedisRepository.getListFirstEventElement(TEST_EVENT_ID, TEST_KEY, 2L).toEpochMilli())
-      .isEqualTo(Long.parseLong(firstElement));
+  void testRemoveEventsOlderThan() {
+    String key = eventKey(TEST_EVENT_ID, TEST_KEY);
+    long now = System.currentTimeMillis();
+    redisClient.zadd(key, now - 10_000, "old-1");
+    redisClient.zadd(key, now - 5_000, "old-2");
+    redisClient.zadd(key, now - 500, "new-1");
+    redisClient.zadd(key, now, "new-2");
+
+    long removed = eventsRedisRepository.removeEventsOlderThan(TEST_EVENT_ID, TEST_KEY, Instant.ofEpochMilli(now - 1_000));
+    assertThat(removed).isEqualTo(2);
+    assertThat(eventsRedisRepository.getEventsCount(TEST_EVENT_ID, TEST_KEY)).isEqualTo(2);
   }
 
   @Test
-  void testGetListFirstEventElementWrongFormat() {
-    redisClient.rpush(eventKey(TEST_EVENT_ID, TEST_KEY), "A", "B", "C");
-    assertThat(eventsRedisRepository.getListLength(TEST_EVENT_ID, TEST_KEY)).isEqualTo(3);
-    assertThat(eventsRedisRepository.getListFirstEventElement(TEST_EVENT_ID, TEST_KEY, 2L)).isNull();
-  }
+  void testRemoveEventsOlderThanBoundaryExclusive() {
+    String key = eventKey(TEST_EVENT_ID, TEST_KEY);
+    long threshold = System.currentTimeMillis() - 2_000;
+    redisClient.zadd(key, threshold - 1, "old");
+    redisClient.zadd(key, threshold, "boundary");
+    redisClient.zadd(key, threshold + 1, "new");
 
-  @Test
-  void testRemoveListFirstElement() throws InterruptedException {
-    eventsRedisRepository.addEvent(TEST_EVENT_ID, TEST_KEY, TEST_TIMEOUT);
-    TimeUnit.MILLISECONDS.sleep(100);
-    eventsRedisRepository.addEvent(TEST_EVENT_ID, TEST_KEY, TEST_TIMEOUT);
-    TimeUnit.MILLISECONDS.sleep(100);
-    eventsRedisRepository.addEvent(TEST_EVENT_ID, TEST_KEY, TEST_TIMEOUT);
-    assertThat(eventsRedisRepository.getListLength(TEST_EVENT_ID, TEST_KEY)).isEqualTo(3);
-    String firstElement = redisClient.lindex(eventKey(TEST_EVENT_ID, TEST_KEY), 0);
-    assertThat(eventsRedisRepository.removeListFirstElement(TEST_EVENT_ID, TEST_KEY).toEpochMilli())
-      .isEqualTo(Long.parseLong(firstElement));
-    assertThat(eventsRedisRepository.getListLength(TEST_EVENT_ID, TEST_KEY)).isEqualTo(2);
-  }
-
-  @Test
-  void testRemoveListFirstElementWrongFormat() {
-    redisClient.rpush(eventKey(TEST_EVENT_ID, TEST_KEY), "A", "B", "C");
-    assertThat(eventsRedisRepository.getListLength(TEST_EVENT_ID, TEST_KEY)).isEqualTo(3);
-    assertThat(eventsRedisRepository.removeListFirstElement(TEST_EVENT_ID, TEST_KEY)).isNull();
-    assertThat(eventsRedisRepository.getListLength(TEST_EVENT_ID, TEST_KEY)).isEqualTo(2);
+    long removed = eventsRedisRepository.removeEventsOlderThan(TEST_EVENT_ID, TEST_KEY, Instant.ofEpochMilli(threshold));
+    assertThat(removed).isOne();
+    assertThat(eventsRedisRepository.getEventsCount(TEST_EVENT_ID, TEST_KEY)).isEqualTo(2);
   }
 
   private String eventKey(String eventId, String key) {

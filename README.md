@@ -71,5 +71,6 @@ Javadoc is available at https://javadoc.jitpack.io/com/github/jfisbein/java-rate
 Limitations
 -----------
 
-As no synchronization method is implemented, some edge race conditions could lead to get a false positive or negative response from the
-method `canDoEvent`. 
+Event attempts are stored in Redis sorted sets (score = epoch millis) and pruned by time window. As no synchronization method is
+implemented around the full `canDoEvent` + `doEvent` workflow, some edge race conditions could still lead to false positive or
+negative responses under heavy concurrency.

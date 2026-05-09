@@ -75,19 +75,19 @@ public class RateLimiter implements Closeable {
       EventConfig eventConfig = eventsConfig.get(eventId);
       Duration eventTime = eventConfig.minTime();
       long eventMaxIntents = eventConfig.maxIntents();
-      long eventIntents = eventsRedisRepository.getListLength(eventId, hashedKey);
+      Instant now = Instant.now();
+      eventsRedisRepository.removeEventsOlderThan(eventId, hashedKey, now.minus(eventTime));
+      long eventIntents = eventsRedisRepository.getEventsCount(eventId, hashedKey);
 
       if (eventIntents >= eventMaxIntents) {
         logger.debug("Checking dates");
-        Instant firstDate = eventsRedisRepository.getListFirstEventElement(eventId, hashedKey, eventMaxIntents);
-        long millisDifference = ChronoUnit.MILLIS.between(firstDate, Instant.now());
-
-        if (millisDifference > eventTime.toMillis()) {
-          eventsRedisRepository.removeListFirstElement(eventId, hashedKey);
+        Instant firstDate = eventsRedisRepository.getOldestEvent(eventId, hashedKey);
+        if (firstDate == null) {
           logger.info("Event [{}] could be performed [{}/{}]", eventId, eventIntents, eventMaxIntents);
           response = CanDoResponse.success(eventIntents);
         } else {
-          response = CanDoResponse.tooMany(eventTime.toMillis() - millisDifference, eventIntents);
+          long millisDifference = ChronoUnit.MILLIS.between(firstDate, now);
+          response = CanDoResponse.tooMany(Math.max(0, eventTime.toMillis() - millisDifference), eventIntents);
         }
       } else {
         logger.info("Event [{}] could be performed [{}/{}]", eventId, eventIntents, eventMaxIntents);
