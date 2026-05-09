@@ -3,17 +3,16 @@ package org.sputnik.ratelimit.dao;
 import java.time.Duration;
 import java.time.Instant;
 import java.util.Objects;
-import org.slf4j.Logger;
-import org.slf4j.LoggerFactory;
+import java.util.UUID;
 import redis.clients.jedis.Jedis;
 import redis.clients.jedis.JedisPool;
+import redis.clients.jedis.resps.Tuple;
 
 /**
  * Repository to manage Events persistence.
  */
 public class EventsRedisRepository {
 
-  private static final Logger logger = LoggerFactory.getLogger(EventsRedisRepository.class);
   protected static final String KEY_SEPARATOR = "-";
   protected final JedisPool jedisPool;
 
@@ -36,9 +35,11 @@ public class EventsRedisRepository {
   public void addEvent(String eventId, String key, Duration duration) {
     try (Jedis jedis = jedisPool.getResource()) {
       String redisKey = eventKey(eventId, key);
-      jedis.rpush(redisKey, Long.toString(System.currentTimeMillis()));
+      long now = System.currentTimeMillis();
+      String member = UUID.randomUUID().toString();
+      jedis.zadd(redisKey, now, member);
       if (duration != null) {
-        jedis.expire(redisKey, (int) duration.getSeconds());
+        jedis.pexpire(redisKey, Math.max(1, duration.toMillis()));
       }
     }
   }
@@ -50,75 +51,46 @@ public class EventsRedisRepository {
    * @param key     Key.
    * @return number of events.
    */
-  public long getListLength(String eventId, String key) {
+  public long getEventsCount(String eventId, String key) {
     long result;
     try (Jedis jedis = jedisPool.getResource()) {
-      result = jedis.llen(eventKey(eventId, key));
+      result = jedis.zcard(eventKey(eventId, key));
     }
 
     return result;
   }
 
   /**
-   * Get first list element date for an event id, and a key.
+   * Get oldest event timestamp for an event id, and a key.
    *
    * @param eventId Event id.
    * @param key     Key.
-   * @return First list element.
+   * @return First event date or null if no events are found.
    */
-  public Instant getListFirstElement(String eventId, String key) {
-    Instant result;
+  public Instant getOldestEvent(String eventId, String key) {
     try (Jedis jedis = jedisPool.getResource()) {
-      String aux = jedis.lindex(eventKey(eventId, key), 0);
-      result = parseTimeStamp(aux);
-    }
-
-    return result;
-  }
-
-  public Instant getListFirstEventElement(String eventId, String key, Long eventMaxIntents) {
-    Instant result;
-    try (Jedis jedis = jedisPool.getResource()) {
-      String redisKey = eventKey(eventId, key);
-      long length = jedis.llen(redisKey);
-      long index = Math.max(0, length - eventMaxIntents);
-      String aux = jedis.lindex(redisKey, index);
-      result = parseTimeStamp(aux);
-    }
-
-    return result;
-  }
-
-  /**
-   * Remove first list element for an event id, and a key.
-   *
-   * @param eventId Event id.
-   * @param key     Key.
-   * @return first list element.
-   */
-  public Instant removeListFirstElement(String eventId, String key) {
-    Instant result = null;
-    String aux;
-    try (Jedis jedis = jedisPool.getResource()) {
-      aux = jedis.lpop(eventKey(eventId, key));
-      if (aux != null) {
-        result = parseTimeStamp(aux);
+      var iterator = jedis.zrangeWithScores(eventKey(eventId, key), 0, 0).iterator();
+      if (iterator.hasNext()) {
+        Tuple tuple = iterator.next();
+        return Instant.ofEpochMilli((long) tuple.getScore());
       }
     }
 
-    return result;
+    return null;
   }
 
-  private Instant parseTimeStamp(String textTimeInMillis) {
-    Instant instant = null;
-
-    try {
-      instant = Instant.ofEpochMilli(Long.parseLong(textTimeInMillis));
-    } catch (NumberFormatException e) {
-      logger.warn("Error parsing date: {}", textTimeInMillis);
+  /**
+   * Remove all events older than threshold instant, using an exclusive upper bound.
+   *
+   * @param eventId    Event id.
+   * @param key        Key.
+   * @param threshold  Threshold instant.
+   * @return number of removed entries.
+   */
+  public long removeEventsOlderThan(String eventId, String key, Instant threshold) {
+    try (Jedis jedis = jedisPool.getResource()) {
+      return jedis.zremrangeByScore(eventKey(eventId, key), "-inf", "(" + threshold.toEpochMilli());
     }
-
-    return instant;
   }
 
   /**
