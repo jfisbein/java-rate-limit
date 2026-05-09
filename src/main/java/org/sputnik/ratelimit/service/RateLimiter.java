@@ -181,10 +181,10 @@ public class RateLimiter implements Closeable {
       if (eventsConfig.containsKey(eventId)) {
         valid = true;
       } else {
-        logger.error("Invalid request - The eventId [{}] is not found", eventId);
+        logger.warn("Invalid request - The eventId [{}] is not found", eventId);
       }
     } else {
-      logger.error("Invalid request - The key is blank");
+      logger.warn("Invalid request - The key is blank");
     }
 
     return valid;
